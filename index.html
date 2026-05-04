@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Cosmo Di — Attendance</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --burgundy:    #1E0608;
+    --burgundy-mid:#2C0A0E;
+    --burgundy-lt: #3D1018;
+    --accent:      #C8956C;
+    --accent-lt:   #E8C4A8;
+    --cream:       #F5EDE4;
+    --white:       #FFFFFF;
+    --muted:       rgba(255,255,255,0.45);
+    --border:      rgba(200,149,108,0.25);
+    --border-lt:   rgba(200,149,108,0.12);
+    --success-bg:  rgba(120,170,100,0.15);
+    --success:     #8FC97A;
+    --error-bg:    rgba(200,80,80,0.15);
+    --error:       #E07070;
+    --warn-bg:     rgba(200,149,108,0.15);
+    --warn:        #C8956C;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--burgundy);
+    color: var(--white);
+    font-family: 'Jost', sans-serif;
+    font-weight: 300;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    width: 100%;
+    max-width: 480px;
+    padding: 32px 24px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-mark {
+    width: 36px;
+    height: 36px;
+  }
+
+  .logo-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px;
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    color: var(--cream);
+    text-transform: uppercase;
+  }
+
+  .header-date {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-align: right;
+    line-height: 1.6;
+  }
+
+  /* ── DIVIDER ── */
+  .divider {
+    width: calc(100% - 48px);
+    max-width: 432px;
+    height: 0.5px;
+    background: var(--border);
+    margin-bottom: 32px;
+  }
+
+  /* ── SCREENS ── */
+  .screen {
+    width: 100%;
+    max-width: 480px;
+    padding: 0 24px 48px;
+    display: none;
+    flex-direction: column;
+    animation: fadeUp 0.35s ease;
+  }
+  .screen.active { display: flex; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── LOADING ── */
+  #screen-loading {
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    min-height: 200px;
+  }
+
+  .spinner {
+    width: 28px; height: 28px;
+    border: 1.5px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-text {
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  /* ── ERROR ── */
+  #screen-error {
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 200px;
+    text-align: center;
+  }
+
+  .error-icon {
+    width: 48px; height: 48px;
+    border: 0.5px solid var(--error);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--error); font-size: 20px;
+  }
+
+  .error-title { font-size: 16px; color: var(--cream); }
+  .error-sub   { font-size: 13px; color: var(--muted); max-width: 260px; line-height: 1.6; }
+
+  /* ── MAIN (action) screen ── */
+  .greeting {
+    margin-bottom: 28px;
+  }
+  .greeting-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 34px;
+    font-weight: 300;
+    color: var(--cream);
+    letter-spacing: 0.02em;
+    margin-bottom: 4px;
+  }
+  .greeting-shift {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+  .greeting-shift span {
+    color: var(--accent-lt);
+  }
+
+  /* ── STATUS PILL ── */
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    margin-bottom: 32px;
+    border: 0.5px solid;
+  }
+  .status-pill.ontime  { background: var(--success-bg); border-color: var(--success); color: var(--success); }
+  .status-pill.late    { background: var(--warn-bg);    border-color: var(--warn);    color: var(--warn); }
+  .status-pill.off     { background: var(--error-bg);   border-color: var(--error);   color: var(--error); }
+  .status-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+  /* ── ACTION BUTTONS ── */
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .action-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+
+  .action-btn {
+    width: 100%;
+    background: var(--burgundy-lt);
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    text-align: left;
+  }
+  .action-btn:hover  { background: #4A1520; border-color: rgba(200,149,108,0.5); }
+  .action-btn:active { transform: scale(0.99); }
+  .action-btn.disabled { opacity: 0.35; pointer-events: none; }
+
+  .action-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .icon-in   { background: rgba(120,170,100,0.12); }
+  .icon-out  { background: rgba(100,140,200,0.12); }
+  .icon-sick { background: rgba(200,149,108,0.12); }
+  .icon-lv   { background: rgba(180,120,180,0.10); }
+
+  .action-text { flex: 1; }
+  .action-title { font-size: 15px; font-weight: 400; color: var(--cream); margin-bottom: 2px; }
+  .action-sub   { font-size: 11px; color: var(--muted); }
+
+  .action-arrow { color: var(--border); font-size: 18px; }
+
+  /* ── FORM SCREENS ── */
+  .form-back {
+    display: flex; align-items: center; gap: 8px;
+    background: none; border: none; color: var(--muted);
+    font-family: 'Jost', sans-serif; font-size: 13px; font-weight: 300;
+    cursor: pointer; margin-bottom: 28px; padding: 0;
+    letter-spacing: 0.04em;
+  }
+  .form-back:hover { color: var(--cream); }
+
+  .form-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 26px; font-weight: 300;
+    color: var(--cream); margin-bottom: 6px;
+  }
+  .form-subtitle { font-size: 12px; color: var(--muted); margin-bottom: 28px; line-height: 1.6; }
+
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block; font-size: 10px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 8px;
+  }
+  .field input, .field textarea, .field select {
+    width: 100%;
+    background: var(--burgundy-lt);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--cream);
+    font-family: 'Jost', sans-serif;
+    font-size: 14px; font-weight: 300;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus {
+    border-color: rgba(200,149,108,0.6);
+  }
+  .field textarea { resize: none; height: 80px; line-height: 1.6; }
+  .field select option { background: var(--burgundy-mid); }
+
+  .policy-note {
+    background: var(--warn-bg);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 12px;
+    color: var(--accent-lt);
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
+
+  .submit-btn {
+    width: 100%; padding: 15px;
+    background: var(--accent);
+    border: none; border-radius: 10px;
+    color: var(--burgundy);
+    font-family: 'Jost', sans-serif;
+    font-size: 14px; font-weight: 500;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+  }
+  .submit-btn:hover  { opacity: 0.9; }
+  .submit-btn:active { transform: scale(0.99); }
+  .submit-btn:disabled { opacity: 0.4; pointer-events: none; }
+
+  /* ── CONFIRMATION ── */
+  #screen-confirm {
+    align-items: center;
+    text-align: center;
+  }
+
+  .confirm-circle {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 20px;
+    border: 0.5px solid;
+  }
+  .confirm-circle.success { background: var(--success-bg); border-color: var(--success); }
+  .confirm-circle.warning { background: var(--warn-bg);    border-color: var(--warn); }
+  .confirm-circle.info    { background: rgba(100,140,200,0.12); border-color: rgba(100,140,200,0.4); }
+
+  .confirm-type {
+    font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 8px;
+  }
+  .confirm-time-big {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 52px; font-weight: 300;
+    color: var(--cream); line-height: 1;
+    margin-bottom: 8px;
+  }
+  .confirm-name-line { font-size: 14px; color: var(--muted); margin-bottom: 20px; }
+
+  .confirm-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 16px; border-radius: 20px;
+    font-size: 12px; border: 0.5px solid; margin-bottom: 32px;
+  }
+  .confirm-badge.success { background: var(--success-bg); border-color: var(--success); color: var(--success); }
+  .confirm-badge.warning { background: var(--warn-bg);    border-color: var(--warn);    color: var(--warn); }
+  .confirm-badge.info    { background: rgba(100,140,200,0.12); border-color: rgba(100,140,200,0.4); color: #9BB8E0; }
+
+  .confirm-progress {
+    width: 100%; height: 2px;
+    background: var(--border-lt);
+    border-radius: 1px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  .confirm-progress-bar {
+    height: 100%; width: 0;
+    background: var(--accent);
+    border-radius: 1px;
+    transition: width 3s linear;
+  }
+  .confirm-countdown { font-size: 11px; color: var(--muted); }
+
+  /* ── GEO ERROR ── */
+  .geo-error {
+    background: var(--error-bg);
+    border: 0.5px solid var(--error);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 13px;
+    color: #E07070;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">
+    <span class="logo-text">Cosmo Di</span>
+  </div>
+  <div class="header-date" id="header-date"></div>
+</div>
+<div class="divider"></div>
+
+<!-- SCREEN: LOADING -->
+<div class="screen active" id="screen-loading">
+  <div class="spinner"></div>
+  <div class="loading-text">Identifying you…</div>
+</div>
+
+<!-- SCREEN: ERROR (invalid token / no shift data) -->
+<div class="screen" id="screen-error">
+  <div class="error-icon">✕</div>
+  <div class="error-title">Access not found</div>
+  <div class="error-sub" id="error-message">This link is not valid. Please contact your manager to receive your personal link.</div>
+</div>
+
+<!-- SCREEN: MAIN ACTIONS -->
+<div class="screen" id="screen-main">
+  <div class="greeting">
+    <div class="greeting-name" id="main-name">—</div>
+    <div class="greeting-shift" id="main-shift">—</div>
+  </div>
+  <div class="status-pill ontime" id="main-status-pill">
+    <div class="status-dot"></div>
+    <span id="main-status-text">On time</span>
+  </div>
+
+  <div class="section-label">Today's actions</div>
+  <div class="action-list">
+    <button class="action-btn" id="btn-checkin" onclick="doCheckin()">
+      <div class="action-icon icon-in">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 3v9M5 8l4-5 4 5" stroke="#8FC97A" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 15h12" stroke="#8FC97A" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="action-text">
+        <div class="action-title">Check in</div>
+        <div class="action-sub" id="checkin-sub">Requires your location</div>
+      </div>
+      <div class="action-arrow">›</div>
+    </button>
+
+    <button class="action-btn" id="btn-checkout" onclick="doCheckout()">
+      <div class="action-icon icon-out">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 15V6M5 10l4 5 4-5" stroke="#9BB8E0" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 3h12" stroke="#9BB8E0" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="action-text">
+        <div class="action-title">Check out</div>
+        <div class="action-sub">End of shift</div>
+      </div>
+      <div class="action-arrow">›</div>
+    </button>
+
+    <button class="action-btn" onclick="showScreen('screen-sick')">
+      <div class="action-icon icon-sick">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="#C8956C" stroke-width="1.2"/><path d="M9 6v4M9 12.5v.5" stroke="#C8956C" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="action-text">
+        <div class="action-title">Sick leave</div>
+        <div class="action-sub">Submit absence notice</div>
+      </div>
+      <div class="action-arrow">›</div>
+    </button>
+
+    <button class="action-btn" onclick="showScreen('screen-leave')">
+      <div class="action-icon icon-lv">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="4" width="14" height="12" rx="2" stroke="#C4A0C4" stroke-width="1.2"/><path d="M6 3v2M12 3v2M2 8h14" stroke="#C4A0C4" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="action-text">
+        <div class="action-title">Leave request</div>
+        <div class="action-sub">Annual leave · request approval</div>
+      </div>
+      <div class="action-arrow">›</div>
+    </button>
+  </div>
+
+  <div class="geo-error" id="geo-error">
+    You appear to be outside the clinic. Check-in requires you to be on-site (within 50 m). If you believe this is an error, please contact your manager.
+  </div>
+</div>
+
+<!-- SCREEN: SICK LEAVE FORM -->
+<div class="screen" id="screen-sick">
+  <button class="form-back" onclick="showScreen('screen-main')">‹ Back</button>
+  <div class="form-title">Sick leave</div>
+  <div class="form-subtitle">Submit your absence notice. A medical certificate from a licensed UAE provider is required and must be submitted on your first day back.</div>
+
+  <div class="policy-note">
+    Per clinic policy, notice must be given at least 12 hours before your shift. Late notice results in an unpaid day regardless of certificate status.
+  </div>
+
+  <div class="field">
+    <label>Absence date(s)</label>
+    <input type="text" id="sick-dates" placeholder="e.g. 05.05.2026 or 05.05.2026, 06.05.2026">
+  </div>
+  <div class="field">
+    <label>When did you first feel unwell?</label>
+    <select id="sick-notice">
+      <option value="24">More than 12 hours before my shift</option>
+      <option value="6">Less than 12 hours before my shift</option>
+      <option value="0">After my shift had already started</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>Brief reason (optional)</label>
+    <textarea id="sick-reason" placeholder="e.g. fever, flu symptoms…"></textarea>
+  </div>
+
+  <button class="submit-btn" onclick="submitSickLeave()">Submit notice</button>
+</div>
+
+<!-- SCREEN: LEAVE REQUEST FORM -->
+<div class="screen" id="screen-leave">
+  <button class="form-back" onclick="showScreen('screen-main')">‹ Back</button>
+  <div class="form-title">Leave request</div>
+  <div class="form-subtitle">Annual leave requests require at least 7 days' notice for short leave, and 30 days' notice for 14+ consecutive days.</div>
+
+  <div class="field">
+    <label>Date(s) requested</label>
+    <input type="text" id="leave-dates" placeholder="e.g. 10.06.2026, 11.06.2026, 12.06.2026">
+  </div>
+  <div class="field">
+    <label>Comment (optional)</label>
+    <textarea id="leave-comment" placeholder="Any notes for your manager…"></textarea>
+  </div>
+
+  <button class="submit-btn" onclick="submitLeaveRequest()">Send request</button>
+</div>
+
+<!-- SCREEN: CONFIRMATION -->
+<div class="screen" id="screen-confirm">
+  <div class="confirm-circle success" id="confirm-circle">
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M7 14l5 5 9-9" stroke="#8FC97A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+  <div class="confirm-type" id="confirm-type">Check-in recorded</div>
+  <div class="confirm-time-big" id="confirm-time">—</div>
+  <div class="confirm-name-line" id="confirm-name-line">—</div>
+  <div class="confirm-badge success" id="confirm-badge">
+    <div class="status-dot"></div>
+    <span id="confirm-badge-text">On time</span>
+  </div>
+  <div class="confirm-progress"><div class="confirm-progress-bar" id="confirm-bar"></div></div>
+  <div class="confirm-countdown">Returning to your screen in 3 seconds</div>
+</div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwQjAl-4gmKN7Gtdfo4iaeDm5GtShopYh2DFL8orkMsuAPELSPpKohkmrLRTEe6tm3v/exec';
+const CLINIC_LAT = 25.139103;
+const CLINIC_LNG = 55.2052463;
+const RADIUS_M   = 50;
+
+let staffName  = '';
+let todayShift = null;
+let token      = '';
+
+// ── INIT ──
+window.addEventListener('DOMContentLoaded', () => {
+  updateHeaderDate();
+  setInterval(updateHeaderDate, 30000);
+
+  const params = new URLSearchParams(window.location.search);
+  token = (params.get('who') || '').toLowerCase().trim();
+
+  if (!token) {
+    showError('No personal link detected. Please use the link sent to you via WhatsApp.');
+    return;
+  }
+
+  fetchMe();
+});
+
+function updateHeaderDate() {
+  const now = new Date();
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('header-date').innerHTML =
+    `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]}<br>${formatTime(now)}`;
+}
+
+function formatTime(d) {
+  return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ── FETCH STAFF ──
+function fetchMe() {
+  fetch(`${SCRIPT_URL}?action=getMe&token=${token}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) { showError('This link is not recognised. Please contact your manager.'); return; }
+      staffName  = data.name;
+      todayShift = data.shift;
+      renderMainScreen();
+    })
+    .catch(() => showError('Connection error. Please check your internet and try again.'));
+}
+
+// ── RENDER MAIN ──
+function renderMainScreen() {
+  document.getElementById('main-name').textContent = staffName;
+
+  if (!todayShift) {
+    document.getElementById('main-shift').textContent = 'Today is your day off';
+    const pill = document.getElementById('main-status-pill');
+    pill.className = 'status-pill off';
+    document.getElementById('main-status-text').textContent = 'Day off';
+    document.getElementById('btn-checkin').classList.add('disabled');
+    document.getElementById('btn-checkout').classList.add('disabled');
+  } else {
+    document.getElementById('main-shift').innerHTML =
+      `Shift today — <span>${todayShift.start} – ${todayShift.finish}</span>`;
+    document.getElementById('checkin-sub').textContent =
+      `Scheduled ${todayShift.start} · requires your location`;
+    updateStatusPill();
+  }
+
+  showScreen('screen-main');
+}
+
+function updateStatusPill() {
+  if (!todayShift) return;
+  const now = new Date();
+  const [sh, sm] = todayShift.start.split(':').map(Number);
+  const scheduled = new Date(now);
+  scheduled.setHours(sh, sm, 0, 0);
+  const diffMin = Math.floor((now - scheduled) / 60000);
+
+  const pill = document.getElementById('main-status-pill');
+  const text = document.getElementById('main-status-text');
+
+  if (diffMin <= 0) {
+    pill.className = 'status-pill ontime';
+    text.textContent = `On time · ${Math.abs(diffMin)} min to go`;
+  } else if (diffMin < 15) {
+    pill.className = 'status-pill late';
+    text.textContent = `${diffMin} min late`;
+  } else {
+    pill.className = 'status-pill late';
+    text.textContent = `${diffMin} min late`;
+  }
+}
+
+// ── CHECK IN ──
+function doCheckin() {
+  document.getElementById('geo-error').style.display = 'none';
+  if (!navigator.geolocation) {
+    callAction('checkin');
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const dist = haversine(pos.coords.latitude, pos.coords.longitude, CLINIC_LAT, CLINIC_LNG);
+      if (dist > RADIUS_M) {
+        document.getElementById('geo-error').style.display = 'block';
+        return;
+      }
+      callAction('checkin');
+    },
+    () => { callAction('checkin'); }, // if denied, let server handle
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+
+// ── CHECK OUT ──
+function doCheckout() {
+  callAction('checkout');
+}
+
+// ── SICK LEAVE ──
+function submitSickLeave() {
+  const dates  = document.getElementById('sick-dates').value.trim();
+  const notice = document.getElementById('sick-notice').value;
+  const reason = document.getElementById('sick-reason').value.trim();
+  if (!dates) { alert('Please enter the date(s) of absence.'); return; }
+
+  const btn = document.querySelector('#screen-sick .submit-btn');
+  btn.disabled = true; btn.textContent = 'Submitting…';
+
+  const url = `${SCRIPT_URL}?action=sickleave&token=${token}&dates=${enc(dates)}&reason=${enc(reason)}&noticeHours=${notice}`;
+  fetch(url).then(r => r.json()).then(data => {
+    if (data.success) showConfirm('Sick leave submitted', null, 'info', `Dates: ${dates}`);
+    else { alert('Error. Please try again.'); btn.disabled = false; btn.textContent = 'Submit notice'; }
+  }).catch(() => { alert('Connection error.'); btn.disabled = false; btn.textContent = 'Submit notice'; });
+}
+
+// ── LEAVE REQUEST ──
+function submitLeaveRequest() {
+  const dates   = document.getElementById('leave-dates').value.trim();
+  const comment = document.getElementById('leave-comment').value.trim();
+  if (!dates) { alert('Please enter the date(s) you are requesting.'); return; }
+
+  const btn = document.querySelector('#screen-leave .submit-btn');
+  btn.disabled = true; btn.textContent = 'Submitting…';
+
+  const url = `${SCRIPT_URL}?action=leaverequest&token=${token}&dates=${enc(dates)}&comment=${enc(comment)}`;
+  fetch(url).then(r => r.json()).then(data => {
+    if (data.success) showConfirm('Leave request sent', null, 'info', `Pending approval · ${dates}`);
+    else { alert('Error. Please try again.'); btn.disabled = false; btn.textContent = 'Send request'; }
+  }).catch(() => { alert('Connection error.'); btn.disabled = false; btn.textContent = 'Send request'; });
+}
+
+// ── CALL ACTION ──
+function callAction(action) {
+  const url = `${SCRIPT_URL}?action=${action}&token=${token}`;
+  fetch(url).then(r => r.json()).then(data => {
+    if (data.error) { alert(data.error); return; }
+    const isLate = data.lateMinutes > 0;
+    const type   = action === 'checkin' ? 'Check-in recorded' : 'Check-out recorded';
+    const badge  = action === 'checkin'
+      ? (isLate ? `${data.lateMinutes} min late` : 'On time')
+      : 'Shift ended';
+    const style  = action === 'checkout' ? 'info' : (isLate ? 'warning' : 'success');
+    showConfirm(type, data.time, style, badge);
+  }).catch(() => alert('Connection error. Please try again.'));
+}
+
+// ── CONFIRM SCREEN ──
+function showConfirm(type, time, style, badgeText) {
+  const now = time || formatTime(new Date());
+
+  document.getElementById('confirm-type').textContent = type;
+  document.getElementById('confirm-time').textContent = now;
+  document.getElementById('confirm-name-line').textContent = `${staffName} · ${getToday()}`;
+  document.getElementById('confirm-badge-text').textContent = badgeText;
+
+  const circle = document.getElementById('confirm-circle');
+  const badge  = document.getElementById('confirm-badge');
+  circle.className = `confirm-circle ${style}`;
+  badge.className  = `confirm-badge ${style}`;
+
+  const svgMap = {
+    success: `<path d="M7 14l5 5 9-9" stroke="#8FC97A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+    warning: `<path d="M14 8v6M14 17v1" stroke="#C8956C" stroke-width="1.5" stroke-linecap="round"/>`,
+    info:    `<path d="M14 8v6M14 17v1" stroke="#9BB8E0" stroke-width="1.5" stroke-linecap="round"/>`
+  };
+  circle.innerHTML = `<svg width="28" height="28" viewBox="0 0 28 28" fill="none">${svgMap[style] || svgMap.success}</svg>`;
+
+  showScreen('screen-confirm');
+
+  // Progress bar → back to main after 3s
+  setTimeout(() => {
+    const bar = document.getElementById('confirm-bar');
+    bar.style.width = '100%';
+  }, 50);
+  setTimeout(() => {
+    renderMainScreen();
+  }, 3200);
+}
+
+// ── HELPERS ──
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showError(msg) {
+  document.getElementById('error-message').textContent = msg;
+  showScreen('screen-error');
+}
+
+function getToday() {
+  const d = new Date();
+  return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}`;
+}
+
+function pad(n) { return n < 10 ? '0'+n : n; }
+function enc(s) { return encodeURIComponent(s); }
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const dLat = (lat2-lat1) * Math.PI/180;
+  const dLon = (lon2-lon1) * Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+</script>
+</body>
+</html>
