@@ -359,6 +359,71 @@
     margin-bottom: 16px;
     display: none;
   }
+
+  /* ── CALENDAR ── */
+  .cal-wrap {
+    background: var(--burgundy-lt);
+    border: 0.5px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+    user-select: none;
+  }
+  .cal-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .cal-nav-btn {
+    background: none; border: none;
+    color: var(--accent); font-size: 18px;
+    cursor: pointer; padding: 4px 10px;
+    border-radius: 6px;
+  }
+  .cal-nav-btn:hover { background: rgba(200,149,108,0.1); }
+  .cal-month {
+    font-size: 13px; font-weight: 400;
+    color: var(--cream); letter-spacing: 0.04em;
+  }
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+  }
+  .cal-dow {
+    text-align: center; font-size: 10px;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 0.05em;
+    padding: 4px 0;
+  }
+  .cal-day {
+    text-align: center;
+    font-size: 12px;
+    padding: 7px 2px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--cream);
+    transition: background 0.15s;
+  }
+  .cal-day:hover { background: rgba(200,149,108,0.15); }
+  .cal-day.selected {
+    background: var(--accent);
+    color: var(--burgundy);
+    font-weight: 500;
+  }
+  .cal-day.past {
+    color: rgba(255,255,255,0.2);
+    cursor: default;
+  }
+  .cal-day.past:hover { background: none; }
+  .cal-selected {
+    font-size: 12px;
+    color: rgba(255,255,255,0.3);
+    line-height: 1.6;
+    min-height: 18px;
+    margin-bottom: 6px;
+  }
 </style>
 </head>
 <body>
@@ -452,27 +517,16 @@
 <div class="screen" id="screen-sick">
   <button class="form-back" onclick="showScreen('screen-main')">‹ Back</button>
   <div class="form-title">Sick leave</div>
-  <div class="form-subtitle">Submit your absence notice. A medical certificate from a licensed UAE provider is required and must be submitted on your first day back.</div>
+  <div class="form-subtitle">Submit your absence notice. A medical certificate from a licensed UAE provider is required — you can submit it on your first day back.</div>
 
   <div class="policy-note">
-    Per clinic policy, notice must be given at least 12 hours before your shift. Late notice results in an unpaid day regardless of certificate status.
+    Notice must be given at least 12 hours before your shift. Late notice results in an unpaid day regardless of certificate status.
   </div>
 
   <div class="field">
-    <label>Absence date(s)</label>
-    <input type="text" id="sick-dates" placeholder="e.g. 05.05.2026 or 05.05.2026, 06.05.2026">
-  </div>
-  <div class="field">
-    <label>When did you first feel unwell?</label>
-    <select id="sick-notice">
-      <option value="24">More than 12 hours before my shift</option>
-      <option value="6">Less than 12 hours before my shift</option>
-      <option value="0">After my shift had already started</option>
-    </select>
-  </div>
-  <div class="field">
-    <label>Brief reason (optional)</label>
-    <textarea id="sick-reason" placeholder="e.g. fever, flu symptoms…"></textarea>
+    <label>Select absence date(s)</label>
+    <div class="cal-wrap" id="sick-cal"></div>
+    <div class="cal-selected" id="sick-selected">No dates selected</div>
   </div>
 
   <button class="submit-btn" onclick="submitSickLeave()">Submit notice</button>
@@ -482,11 +536,12 @@
 <div class="screen" id="screen-leave">
   <button class="form-back" onclick="showScreen('screen-main')">‹ Back</button>
   <div class="form-title">Leave request</div>
-  <div class="form-subtitle">Annual leave requests require at least 7 days' notice for short leave, and 30 days' notice for 14+ consecutive days.</div>
+  <div class="form-subtitle">Select the dates you are requesting. Short leave requires 7 days notice; 14+ consecutive days require 30 days notice.</div>
 
   <div class="field">
-    <label>Date(s) requested</label>
-    <input type="text" id="leave-dates" placeholder="e.g. 10.06.2026, 11.06.2026, 12.06.2026">
+    <label>Select date(s)</label>
+    <div class="cal-wrap" id="leave-cal"></div>
+    <div class="cal-selected" id="leave-selected">No dates selected</div>
   </div>
   <div class="field">
     <label>Comment (optional)</label>
@@ -660,35 +715,112 @@ function doCheckout() {
   callAction('checkout');
 }
 
+// ── CALENDAR STATE ──
+let sickDates  = [];
+let leaveDates = [];
+
+function buildCalendar(containerId, selectedId) {
+  const now   = new Date();
+  let year    = now.getFullYear();
+  let month   = now.getMonth();
+
+  function render() {
+    const wrap = document.getElementById(containerId);
+    if (!wrap) return;
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysIn   = new Date(year, month + 1, 0).getDate();
+    const months   = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+    let html = `<div class="cal-nav">
+      <button onclick="calPrev('${containerId}','${stateArr}','${selectedId}')" class="cal-nav-btn">‹</button>
+      <span class="cal-month">${months[month]} ${year}</span>
+      <button onclick="calNext('${containerId}','${stateArr}','${selectedId}')" class="cal-nav-btn">›</button>
+    </div>
+    <div class="cal-grid">
+      <div class="cal-dow">Su</div><div class="cal-dow">Mo</div><div class="cal-dow">Tu</div>
+      <div class="cal-dow">We</div><div class="cal-dow">Th</div><div class="cal-dow">Fr</div><div class="cal-dow">Sa</div>`;
+
+    for (let i = 0; i < firstDay; i++) html += '<div></div>';
+
+    const todayStr = dateKey(now.getFullYear(), now.getMonth(), now.getDate());
+    for (let d = 1; d <= daysIn; d++) {
+      const key  = dateKey(year, month, d);
+      const sel  = stateArr.includes(key);
+      const past = key < todayStr;
+      html += `<div class="cal-day${sel ? ' selected' : ''}${past ? ' past' : ''}"
+        onclick="${past ? '' : `toggleDate('${key}','${containerId}','${selectedId}')`}">${d}</div>`;
+    }
+    html += '</div>';
+    wrap.innerHTML = html;
+    updateSelected(stateArr, selectedId);
+  }
+  render();
+  // store render fn for nav
+  window[`_calRender_${containerId}`] = render;
+  window[`_calYear_${containerId}`]   = () => year;
+  window[`_calMonth_${containerId}`]  = () => month;
+  window[`_calSet_${containerId}`]    = (y, m) => { year = y; month = m; render(); };
+}
+
+function calPrev(cid, arr, sid) {
+  let y = window[`_calYear_${cid}`]();
+  let m = window[`_calMonth_${cid}`]();
+  m--; if (m < 0) { m = 11; y--; }
+  window[`_calSet_${cid}`](y, m);
+}
+function calNext(cid, arr, sid) {
+  let y = window[`_calYear_${cid}`]();
+  let m = window[`_calMonth_${cid}`]();
+  m++; if (m > 11) { m = 0; y++; }
+  window[`_calSet_${cid}`](y, m);
+}
+
+function dateKey(y, m, d) {
+  return `${pad(d)}.${pad(m+1)}.${y}`;
+}
+
+function toggleDate(key, cid, sid) {
+  const arr = cid.includes('sick') ? sickDates : leaveDates;
+  const idx = arr.indexOf(key);
+  if (idx >= 0) arr.splice(idx, 1);
+  else arr.push(key);
+  arr.sort();
+  window[`_calRender_${cid}`]();
+  updateSelected(arr, sid);
+}
+
+function updateSelected(arr, sid) {
+  const el = document.getElementById(sid);
+  if (!el) return;
+  el.textContent = arr.length ? arr.join(', ') : 'No dates selected';
+  el.style.color = arr.length ? 'var(--accent-lt)' : 'rgba(255,255,255,0.3)';
+}
+
 // ── SICK LEAVE ──
 function submitSickLeave() {
-  const dates  = document.getElementById('sick-dates').value.trim();
-  const notice = document.getElementById('sick-notice').value;
-  const reason = document.getElementById('sick-reason').value.trim();
-  if (!dates) { alert('Please enter the date(s) of absence.'); return; }
-
-  const btn = document.querySelector('#screen-sick .submit-btn');
+  if (!sickDates.length) { alert('Please select at least one date.'); return; }
+  const dates = sickDates.join(', ');
+  const btn   = document.querySelector('#screen-sick .submit-btn');
   btn.disabled = true; btn.textContent = 'Submitting…';
 
-  const url = `${SCRIPT_URL}?action=sickleave&token=${token}&dates=${enc(dates)}&reason=${enc(reason)}&noticeHours=${notice}`;
+  const url = `${SCRIPT_URL}?action=sickleave&token=${token}&dates=${enc(dates)}`;
   fetch(url).then(r => r.json()).then(data => {
-    if (data.success) showConfirm('Sick leave submitted', null, 'info', `Dates: ${dates}`);
+    if (data.success) showConfirm('Sick leave submitted', null, 'info', `${sickDates.length} day(s) submitted`);
     else { alert('Error. Please try again.'); btn.disabled = false; btn.textContent = 'Submit notice'; }
   }).catch(() => { alert('Connection error.'); btn.disabled = false; btn.textContent = 'Submit notice'; });
 }
 
 // ── LEAVE REQUEST ──
 function submitLeaveRequest() {
-  const dates   = document.getElementById('leave-dates').value.trim();
+  if (!leaveDates.length) { alert('Please select at least one date.'); return; }
+  const dates   = leaveDates.join(', ');
   const comment = document.getElementById('leave-comment').value.trim();
-  if (!dates) { alert('Please enter the date(s) you are requesting.'); return; }
-
-  const btn = document.querySelector('#screen-leave .submit-btn');
+  const btn     = document.querySelector('#screen-leave .submit-btn');
   btn.disabled = true; btn.textContent = 'Submitting…';
 
   const url = `${SCRIPT_URL}?action=leaverequest&token=${token}&dates=${enc(dates)}&comment=${enc(comment)}`;
   fetch(url).then(r => r.json()).then(data => {
-    if (data.success) showConfirm('Leave request sent', null, 'info', `Pending approval · ${dates}`);
+    if (data.success) showConfirm('Leave request sent', null, 'info', `${leaveDates.length} day(s) · pending approval`);
     else { alert('Error. Please try again.'); btn.disabled = false; btn.textContent = 'Send request'; }
   }).catch(() => { alert('Connection error.'); btn.disabled = false; btn.textContent = 'Send request'; });
 }
@@ -747,6 +879,8 @@ function showConfirm(type, time, style, badgeText) {
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  if (id === 'screen-sick')  { sickDates  = []; setTimeout(() => buildCalendar('sick-cal',  'sick-selected'),  50); }
+  if (id === 'screen-leave') { leaveDates = []; setTimeout(() => buildCalendar('leave-cal', 'leave-selected'), 50); }
 }
 
 function showError(msg) {
