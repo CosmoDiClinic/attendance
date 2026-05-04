@@ -720,46 +720,49 @@ let sickDates  = [];
 let leaveDates = [];
 
 function buildCalendar(containerId, selectedId) {
-  const now   = new Date();
-  let year    = now.getFullYear();
-  let month   = now.getMonth();
+  const now = new Date();
+  let year  = now.getFullYear();
+  let month = now.getMonth();
+
+  function getArr() { return containerId.includes('sick') ? sickDates : leaveDates; }
 
   function render() {
     const wrap = document.getElementById(containerId);
     if (!wrap) return;
+    const arr      = getArr();
     const firstDay = new Date(year, month, 1).getDay();
     const daysIn   = new Date(year, month + 1, 0).getDate();
-    const months   = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const mNames   = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const todayStr = dateKey(now.getFullYear(), now.getMonth(), now.getDate());
 
-    let html = `<div class="cal-nav">
-      <button onclick="calPrev('${containerId}','${stateArr}','${selectedId}')" class="cal-nav-btn">‹</button>
-      <span class="cal-month">${months[month]} ${year}</span>
-      <button onclick="calNext('${containerId}','${stateArr}','${selectedId}')" class="cal-nav-btn">›</button>
-    </div>
-    <div class="cal-grid">
-      <div class="cal-dow">Su</div><div class="cal-dow">Mo</div><div class="cal-dow">Tu</div>
-      <div class="cal-dow">We</div><div class="cal-dow">Th</div><div class="cal-dow">Fr</div><div class="cal-dow">Sa</div>`;
+    let html = '<div class="cal-nav">'
+      + '<button class="cal-nav-btn" onclick="calPrev('' + containerId + '','' + selectedId + '')">&#8249;</button>'
+      + '<span class="cal-month">' + mNames[month] + ' ' + year + '</span>'
+      + '<button class="cal-nav-btn" onclick="calNext('' + containerId + '','' + selectedId + '')">&#8250;</button>'
+      + '</div><div class="cal-grid">'
+      + '<div class="cal-dow">Su</div><div class="cal-dow">Mo</div><div class="cal-dow">Tu</div>'
+      + '<div class="cal-dow">We</div><div class="cal-dow">Th</div><div class="cal-dow">Fr</div><div class="cal-dow">Sa</div>';
 
     for (let i = 0; i < firstDay; i++) html += '<div></div>';
 
-    const todayStr = dateKey(now.getFullYear(), now.getMonth(), now.getDate());
     for (let d = 1; d <= daysIn; d++) {
       const key  = dateKey(year, month, d);
-      const sel  = stateArr.includes(key);
+      const sel  = arr.includes(key);
       const past = key < todayStr;
-      html += `<div class="cal-day${sel ? ' selected' : ''}${past ? ' past' : ''}"
-        onclick="${past ? '' : `toggleDate('${key}','${containerId}','${selectedId}')`}">${d}</div>`;
+      const cls  = 'cal-day' + (sel ? ' selected' : '') + (past ? ' past' : '');
+      const click = past ? '' : ' onclick="toggleDate('' + key + '','' + containerId + '','' + selectedId + '')"';
+      html += '<div class="' + cls + '"' + click + '>' + d + '</div>';
     }
     html += '</div>';
     wrap.innerHTML = html;
-    updateSelected(stateArr, selectedId);
+    updateSelected(arr, selectedId);
   }
+
   render();
-  // store render fn for nav
-  window[`_calRender_${containerId}`] = render;
-  window[`_calYear_${containerId}`]   = () => year;
-  window[`_calMonth_${containerId}`]  = () => month;
-  window[`_calSet_${containerId}`]    = (y, m) => { year = y; month = m; render(); };
+  window['_calRender_' + containerId] = render;
+  window['_calYear_'   + containerId] = function() { return year; };
+  window['_calMonth_'  + containerId] = function() { return month; };
+  window['_calSet_'    + containerId] = function(y, m) { year = y; month = m; render(); };
 }
 
 function calPrev(cid, arr, sid) {
