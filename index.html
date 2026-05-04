@@ -518,9 +518,11 @@ const CLINIC_LAT = 25.139103;
 const CLINIC_LNG = 55.2052463;
 const RADIUS_M   = 50;
 
-let staffName  = '';
-let todayShift = null;
-let token      = '';
+let staffName         = '';
+let todayShift        = null;
+let token             = '';
+let alreadyCheckedIn  = false;
+let alreadyCheckedOut = false;
 
 // ── INIT ──
 window.addEventListener('DOMContentLoaded', () => {
@@ -555,9 +557,16 @@ function fetchMe() {
   fetch(`${SCRIPT_URL}?action=getMe&token=${token}`)
     .then(r => r.json())
     .then(data => {
-      if (data.error) { showError('This link is not recognised. Please contact your manager.'); return; }
+      if (data.error) { showError('This link is not recognised. Please contact your manager.'); return null; }
       staffName  = data.name;
       todayShift = data.shift;
+      return fetch(`${SCRIPT_URL}?action=getStatus&token=${token}`);
+    })
+    .then(r => r ? r.json() : null)
+    .then(status => {
+      if (!status) return;
+      alreadyCheckedIn  = status.checkedIn  || false;
+      alreadyCheckedOut = status.checkedOut || false;
       renderMainScreen();
     })
     .catch(() => showError('Connection error. Please check your internet and try again.'));
@@ -574,6 +583,23 @@ function renderMainScreen() {
     document.getElementById('main-status-text').textContent = 'Day off';
     document.getElementById('btn-checkin').classList.add('disabled');
     document.getElementById('btn-checkout').classList.add('disabled');
+  } else if (alreadyCheckedIn && !alreadyCheckedOut) {
+    document.getElementById('main-shift').innerHTML =
+      `Shift today — <span>${todayShift.start} – ${todayShift.finish}</span>`;
+    document.getElementById('checkin-sub').textContent = 'Already checked in today';
+    document.getElementById('btn-checkin').classList.add('disabled');
+    const pill = document.getElementById('main-status-pill');
+    pill.className = 'status-pill ontime';
+    document.getElementById('main-status-text').textContent = 'Checked in';
+  } else if (alreadyCheckedIn && alreadyCheckedOut) {
+    document.getElementById('main-shift').innerHTML =
+      `Shift today — <span>${todayShift.start} – ${todayShift.finish}</span>`;
+    document.getElementById('checkin-sub').textContent = 'Already checked in today';
+    document.getElementById('btn-checkin').classList.add('disabled');
+    document.getElementById('btn-checkout').classList.add('disabled');
+    const pill = document.getElementById('main-status-pill');
+    pill.className = 'status-pill ontime';
+    document.getElementById('main-status-text').textContent = 'Shift complete';
   } else {
     document.getElementById('main-shift').innerHTML =
       `Shift today — <span>${todayShift.start} – ${todayShift.finish}</span>`;
@@ -678,6 +704,8 @@ function callAction(action) {
       ? (isLate ? `${data.lateMinutes} min late` : 'On time')
       : 'Shift ended';
     const style  = action === 'checkout' ? 'info' : (isLate ? 'warning' : 'success');
+    if (action === 'checkin')  alreadyCheckedIn  = true;
+    if (action === 'checkout') alreadyCheckedOut = true;
     showConfirm(type, data.time, style, badge);
   }).catch(() => alert('Connection error. Please try again.'));
 }
