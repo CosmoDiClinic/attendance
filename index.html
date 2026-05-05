@@ -57,8 +57,7 @@
 
   .section-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
   .action-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
-  .action-btn { width: 100%; background: var(--burgundy-lt); border: 0.5px solid var(--border); border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; gap: 16px; cursor: pointer; text-align: left; transition: border-color 0.2s; }
-  .action-btn:hover { border-color: rgba(200,149,108,0.5); }
+  .action-btn { width: 100%; background: var(--burgundy-lt); border: 0.5px solid var(--border); border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; gap: 16px; cursor: pointer; text-align: left; }
   .action-btn:active { transform: scale(0.99); }
   .action-btn.disabled { opacity: 0.35; pointer-events: none; }
   .action-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -72,7 +71,6 @@
   .action-arrow { color: var(--border); font-size: 18px; }
 
   .form-back { display: flex; align-items: center; gap: 8px; background: none; border: none; color: var(--muted); font-family: 'Jost', sans-serif; font-size: 13px; font-weight: 300; cursor: pointer; margin-bottom: 28px; padding: 0; }
-  .form-back:hover { color: var(--cream); }
   .form-title { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 300; color: var(--cream); margin-bottom: 6px; }
   .form-subtitle { font-size: 12px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
   .policy-note { background: var(--warn-bg); border: 0.5px solid var(--border); border-radius: 8px; padding: 12px 14px; font-size: 12px; color: var(--accent-lt); line-height: 1.6; margin-bottom: 20px; }
@@ -85,17 +83,17 @@
   .submit-btn:active { transform: scale(0.99); }
   .submit-btn:disabled { opacity: 0.4; pointer-events: none; }
 
-  /* CALENDAR */
   .cal-wrap { background: var(--burgundy-lt); border: 0.5px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 10px; }
-  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
   .cal-nav-btn { background: none; border: none; color: var(--accent); font-size: 20px; cursor: pointer; padding: 2px 10px; border-radius: 6px; line-height: 1; }
-  .cal-nav-btn:hover { background: rgba(200,149,108,0.1); }
   .cal-month { font-size: 13px; color: var(--cream); letter-spacing: 0.04em; }
+  .cal-hint { font-size: 11px; color: rgba(255,255,255,0.3); margin-bottom: 10px; min-height: 16px; }
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
-  .cal-dow { text-align: center; font-size: 10px; color: rgba(255,255,255,0.3); padding: 4px 0; letter-spacing: 0.04em; }
+  .cal-dow { text-align: center; font-size: 10px; color: rgba(255,255,255,0.3); padding: 4px 0; }
   .cal-day { text-align: center; font-size: 13px; padding: 8px 2px; border-radius: 6px; cursor: pointer; color: var(--cream); }
   .cal-day:hover { background: rgba(200,149,108,0.15); }
   .cal-day.selected { background: var(--accent); color: var(--burgundy); font-weight: 500; }
+  .cal-day.range-start { background: rgba(200,149,108,0.5); color: var(--cream); font-weight: 500; }
   .cal-day.past { color: rgba(255,255,255,0.2); cursor: default; pointer-events: none; }
   .cal-selected { font-size: 12px; color: rgba(255,255,255,0.3); line-height: 1.6; min-height: 18px; margin-bottom: 4px; }
 
@@ -128,7 +126,7 @@
 
 <div class="screen active" id="screen-loading">
   <div class="spinner"></div>
-  <div class="loading-text">Identifying you…</div>
+  <div class="loading-text">Identifying you&#8230;</div>
 </div>
 
 <div class="screen" id="screen-error">
@@ -139,14 +137,14 @@
 
 <div class="screen" id="screen-main">
   <div class="greeting">
-    <div class="greeting-name" id="main-name">—</div>
-    <div class="greeting-shift" id="main-shift">—</div>
+    <div class="greeting-name" id="main-name">&#8212;</div>
+    <div class="greeting-shift" id="main-shift">&#8212;</div>
   </div>
   <div class="status-pill ontime" id="main-status-pill">
     <div class="status-dot"></div>
     <span id="main-status-text">On time</span>
   </div>
-  <div class="section-label">Today's actions</div>
+  <div class="section-label">Today&#39;s actions</div>
   <div class="action-list">
     <button class="action-btn" id="btn-checkin" onclick="doCheckin()">
       <div class="action-icon icon-in">
@@ -184,7 +182,7 @@
       </div>
       <div class="action-text">
         <div class="action-title">Leave request</div>
-        <div class="action-sub">Annual leave · request approval</div>
+        <div class="action-sub">Annual leave &#183; request approval</div>
       </div>
       <div class="action-arrow">&#8250;</div>
     </button>
@@ -195,7 +193,7 @@
 <div class="screen" id="screen-sick">
   <button class="form-back" onclick="showScreen('screen-main')">&#8249; Back</button>
   <div class="form-title">Sick leave</div>
-  <div class="form-subtitle">Submit your absence notice. A medical certificate is required — you can submit it on your first day back.</div>
+  <div class="form-subtitle">Submit your absence notice. A medical certificate is required &#8212; you can submit it on your first day back.</div>
   <div class="policy-note">Notice must be given at least 12 hours before your shift. Late notice results in an unpaid day regardless of certificate status.</div>
   <div class="field">
     <label>Select absence date(s)</label>
@@ -208,7 +206,7 @@
 <div class="screen" id="screen-leave">
   <button class="form-back" onclick="showScreen('screen-main')">&#8249; Back</button>
   <div class="form-title">Leave request</div>
-  <div class="form-subtitle">Select the dates you are requesting. Short leave requires 7 days notice; 14+ consecutive days require 30 days notice.</div>
+  <div class="form-subtitle">Tap the first day, then the last day of your leave. All days in between will be included.</div>
   <div class="field">
     <label>Select date(s)</label>
     <div class="cal-wrap" id="leave-cal"></div>
@@ -216,7 +214,7 @@
   </div>
   <div class="field">
     <label>Comment (optional)</label>
-    <textarea id="leave-comment" placeholder="Any notes for your manager…"></textarea>
+    <textarea id="leave-comment" placeholder="Any notes for your manager&#8230;"></textarea>
   </div>
   <button class="submit-btn" onclick="submitLeaveRequest()">Send request</button>
 </div>
@@ -226,8 +224,8 @@
     <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M7 14l5 5 9-9" stroke="#8FC97A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </div>
   <div class="confirm-type" id="confirm-type">Check-in recorded</div>
-  <div class="confirm-time-big" id="confirm-time">—</div>
-  <div class="confirm-name-line" id="confirm-name-line">—</div>
+  <div class="confirm-time-big" id="confirm-time">&#8212;</div>
+  <div class="confirm-name-line" id="confirm-name-line">&#8212;</div>
   <div class="confirm-badge success" id="confirm-badge">
     <div class="status-dot"></div>
     <span id="confirm-badge-text">On time</span>
@@ -237,18 +235,19 @@
 </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwQjAl-4gmKN7Gtdfo4iaeDm5GtShopYh2DFL8orkMsuAPELSPpKohkmrLRTEe6tm3v/exec';
-const CLINIC_LAT = 25.139103;
-const CLINIC_LNG = 55.2052463;
-const RADIUS_M   = 50;
+var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwQjAl-4gmKN7Gtdfo4iaeDm5GtShopYh2DFL8orkMsuAPELSPpKohkmrLRTEe6tm3v/exec';
+var CLINIC_LAT = 25.139103;
+var CLINIC_LNG = 55.2052463;
+var RADIUS_M   = 50;
 
-let staffName         = '';
-let todayShift        = null;
-let token             = '';
-let alreadyCheckedIn  = false;
-let alreadyCheckedOut = false;
-let sickDates         = [];
-let leaveDates        = [];
+var staffName         = '';
+var todayShift        = null;
+var token             = '';
+var alreadyCheckedIn  = false;
+var alreadyCheckedOut = false;
+var sickDates         = [];
+var leaveDates        = [];
+var calRangeStart     = {};
 
 window.addEventListener('DOMContentLoaded', function() {
   updateHeaderDate();
@@ -291,51 +290,47 @@ function fetchMe() {
 
 function renderMainScreen() {
   document.getElementById('main-name').textContent = staffName;
+  var pill = document.getElementById('main-status-pill');
+  var text = document.getElementById('main-status-text');
 
   if (!todayShift) {
     document.getElementById('main-shift').textContent = 'Today is your day off';
-    document.getElementById('main-status-pill').className = 'status-pill off';
-    document.getElementById('main-status-text').textContent = 'Day off';
+    pill.className = 'status-pill off';
+    text.textContent = 'Day off';
     document.getElementById('btn-checkin').classList.add('disabled');
     document.getElementById('btn-checkout').classList.add('disabled');
   } else if (alreadyCheckedIn && alreadyCheckedOut) {
-    document.getElementById('main-shift').innerHTML = 'Shift today — <span>' + todayShift.start + ' – ' + todayShift.finish + '</span>';
+    document.getElementById('main-shift').innerHTML = 'Shift today &#8212; <span>' + todayShift.start + ' &#8211; ' + todayShift.finish + '</span>';
     document.getElementById('checkin-sub').textContent = 'Already checked in today';
     document.getElementById('btn-checkin').classList.add('disabled');
     document.getElementById('btn-checkout').classList.add('disabled');
-    document.getElementById('main-status-pill').className = 'status-pill ontime';
-    document.getElementById('main-status-text').textContent = 'Shift complete';
+    pill.className = 'status-pill ontime';
+    text.textContent = 'Shift complete';
   } else if (alreadyCheckedIn) {
-    document.getElementById('main-shift').innerHTML = 'Shift today — <span>' + todayShift.start + ' – ' + todayShift.finish + '</span>';
+    document.getElementById('main-shift').innerHTML = 'Shift today &#8212; <span>' + todayShift.start + ' &#8211; ' + todayShift.finish + '</span>';
     document.getElementById('checkin-sub').textContent = 'Already checked in today';
     document.getElementById('btn-checkin').classList.add('disabled');
-    document.getElementById('main-status-pill').className = 'status-pill ontime';
-    document.getElementById('main-status-text').textContent = 'Checked in';
+    pill.className = 'status-pill ontime';
+    text.textContent = 'Checked in';
   } else {
-    document.getElementById('main-shift').innerHTML = 'Shift today — <span>' + todayShift.start + ' – ' + todayShift.finish + '</span>';
+    document.getElementById('main-shift').innerHTML = 'Shift today &#8212; <span>' + todayShift.start + ' &#8211; ' + todayShift.finish + '</span>';
     document.getElementById('checkin-sub').textContent = 'Scheduled ' + todayShift.start + ' · requires your location';
     updateStatusPill();
   }
-
   showScreen('screen-main');
 }
 
 function updateStatusPill() {
   if (!todayShift) return;
-  var now  = new Date();
+  var now   = new Date();
   var parts = todayShift.start.split(':');
-  var scheduled = new Date(now);
-  scheduled.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
-  var diffMin = Math.floor((now - scheduled) / 60000);
-  var pill = document.getElementById('main-status-pill');
-  var text = document.getElementById('main-status-text');
-  if (diffMin <= 0) {
-    pill.className = 'status-pill ontime';
-    text.textContent = 'On time · ' + Math.abs(diffMin) + ' min to go';
-  } else {
-    pill.className = 'status-pill late';
-    text.textContent = diffMin + ' min late';
-  }
+  var sched = new Date(now);
+  sched.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
+  var diff  = Math.floor((now - sched) / 60000);
+  var pill  = document.getElementById('main-status-pill');
+  var text  = document.getElementById('main-status-text');
+  if (diff <= 0) { pill.className = 'status-pill ontime'; text.textContent = 'On time · ' + Math.abs(diff) + ' min to go'; }
+  else           { pill.className = 'status-pill late';   text.textContent = diff + ' min late'; }
 }
 
 function doCheckin() {
@@ -343,8 +338,9 @@ function doCheckin() {
   if (!navigator.geolocation) { callAction('checkin'); return; }
   navigator.geolocation.getCurrentPosition(
     function(pos) {
-      var dist = haversine(pos.coords.latitude, pos.coords.longitude, CLINIC_LAT, CLINIC_LNG);
-      if (dist > RADIUS_M) { document.getElementById('geo-error').style.display = 'block'; return; }
+      if (haversine(pos.coords.latitude, pos.coords.longitude, CLINIC_LAT, CLINIC_LNG) > RADIUS_M) {
+        document.getElementById('geo-error').style.display = 'block'; return;
+      }
       callAction('checkin');
     },
     function() { callAction('checkin'); },
@@ -371,87 +367,135 @@ function callAction(action) {
 }
 
 // ── CALENDAR ──
-function buildCalendar(containerId, selectedId) {
+function buildCalendar(cid, sid) {
   var now   = new Date();
   var year  = now.getFullYear();
   var month = now.getMonth();
+  calRangeStart[cid] = null;
 
-  function getArr() { return containerId.indexOf('sick') >= 0 ? sickDates : leaveDates; }
+  function getArr() { return cid.indexOf('sick') >= 0 ? sickDates : leaveDates; }
 
   function render() {
-    var wrap = document.getElementById(containerId);
+    var wrap = document.getElementById(cid);
     if (!wrap) return;
     var arr      = getArr();
+    var rs       = calRangeStart[cid];
     var firstDay = new Date(year, month, 1).getDay();
     var daysIn   = new Date(year, month + 1, 0).getDate();
     var mNames   = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    var todayStr = dateKey(now.getFullYear(), now.getMonth(), now.getDate());
+    var todayStr = dkey(now.getFullYear(), now.getMonth(), now.getDate());
 
-    var html = '<div class="cal-nav">'
-      + '<button class="cal-nav-btn" onclick="calMove(\'' + containerId + '\',\'' + selectedId + '\',-1)">&#8249;</button>'
+    var hint = rs ? 'Now tap the last date' : (arr.length ? 'Tap any date to reset and start over' : 'Tap the first date of your absence');
+
+    var h = '<div class="cal-nav">'
+      + '<button class="cal-nav-btn" onclick="calMove(\'' + cid + '\',\'' + sid + '\',-1)">&#8249;</button>'
       + '<span class="cal-month">' + mNames[month] + ' ' + year + '</span>'
-      + '<button class="cal-nav-btn" onclick="calMove(\'' + containerId + '\',\'' + selectedId + '\',1)">&#8250;</button>'
-      + '</div><div class="cal-grid">'
+      + '<button class="cal-nav-btn" onclick="calMove(\'' + cid + '\',\'' + sid + '\',1)">&#8250;</button>'
+      + '</div>'
+      + '<div class="cal-hint">' + hint + '</div>'
+      + '<div class="cal-grid">'
       + '<div class="cal-dow">Su</div><div class="cal-dow">Mo</div><div class="cal-dow">Tu</div>'
       + '<div class="cal-dow">We</div><div class="cal-dow">Th</div><div class="cal-dow">Fr</div><div class="cal-dow">Sa</div>';
 
-    for (var i = 0; i < firstDay; i++) html += '<div></div>';
+    for (var i = 0; i < firstDay; i++) h += '<div></div>';
 
     for (var d = 1; d <= daysIn; d++) {
-      var key  = dateKey(year, month, d);
-      var sel  = arr.indexOf(key) >= 0;
-      var past = key < todayStr;
-      var cls  = 'cal-day' + (sel ? ' selected' : '') + (past ? ' past' : '');
-      if (past) {
-        html += '<div class="' + cls + '">' + d + '</div>';
+      var key = dkey(year, month, d);
+      var isPast = key < todayStr;
+      if (isPast) {
+        h += '<div class="cal-day past">' + d + '</div>';
       } else {
-        html += '<div class="' + cls + '" onclick="toggleDate(\'' + key + '\',\'' + containerId + '\',\'' + selectedId + '\')">' + d + '</div>';
+        var cls = 'cal-day';
+        if (rs === key) cls += ' range-start';
+        else if (arr.indexOf(key) >= 0) cls += ' selected';
+        h += '<div class="' + cls + '" onclick="pickDate(\'' + key + '\',\'' + cid + '\',\'' + sid + '\')">' + d + '</div>';
       }
     }
-    html += '</div>';
-    wrap.innerHTML = html;
-    updateSelected(arr, selectedId);
+    h += '</div>';
+    wrap.innerHTML = h;
+    updateSelected(arr, sid);
   }
 
   render();
-  window['_cal_' + containerId + '_year']   = function() { return year; };
-  window['_cal_' + containerId + '_month']  = function() { return month; };
-  window['_cal_' + containerId + '_move']   = function(dir) { month += dir; if (month > 11) { month = 0; year++; } if (month < 0) { month = 11; year--; } render(); };
+  window['_cr_' + cid] = render;
+  window['_cm_' + cid] = function(dir) {
+    month += dir;
+    if (month > 11) { month = 0; year++; }
+    if (month < 0)  { month = 11; year--; }
+    render();
+  };
 }
 
 function calMove(cid, sid, dir) {
-  if (window['_cal_' + cid + '_move']) window['_cal_' + cid + '_move'](dir);
+  if (window['_cm_' + cid]) window['_cm_' + cid](dir);
 }
 
-function dateKey(y, m, d) {
+function dkey(y, m, d) {
   return pad(d) + '.' + pad(m + 1) + '.' + y;
 }
 
-function toggleDate(key, cid, sid) {
+function dkeyToDate(k) {
+  var p = k.split('.');
+  return new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
+}
+
+function pickDate(key, cid, sid) {
   var arr = cid.indexOf('sick') >= 0 ? sickDates : leaveDates;
-  var idx = arr.indexOf(key);
-  if (idx >= 0) arr.splice(idx, 1);
-  else arr.push(key);
-  arr.sort();
-  if (window['_cal_' + cid + '_move']) {
-    // re-render by moving 0
-    window['_cal_' + cid + '_move'](0);
+  var rs  = calRangeStart[cid];
+
+  // If range already selected — reset and start fresh
+  if (arr.length > 0 && !rs) {
+    arr.length = 0;
+    calRangeStart[cid] = key;
+    if (window['_cr_' + cid]) window['_cr_' + cid]();
+    updateSelected(arr, sid);
+    return;
   }
+
+  // First tap
+  if (!rs) {
+    calRangeStart[cid] = key;
+    if (window['_cr_' + cid]) window['_cr_' + cid]();
+    return;
+  }
+
+  // Second tap — fill range
+  var start = dkeyToDate(rs);
+  var end   = dkeyToDate(key);
+  if (end < start) { var tmp = start; start = end; end = tmp; }
+
+  arr.length = 0;
+  var cur = new Date(start);
+  while (cur <= end) {
+    arr.push(dkey(cur.getFullYear(), cur.getMonth(), cur.getDate()));
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  calRangeStart[cid] = null;
+  if (window['_cr_' + cid]) window['_cr_' + cid]();
   updateSelected(arr, sid);
 }
 
 function updateSelected(arr, sid) {
   var el = document.getElementById(sid);
   if (!el) return;
-  el.textContent = arr.length ? arr.join(', ') : 'No dates selected';
-  el.style.color = arr.length ? 'var(--accent-lt)' : 'rgba(255,255,255,0.3)';
+  if (!arr.length) {
+    el.textContent = 'No dates selected';
+    el.style.color = 'rgba(255,255,255,0.3)';
+  } else if (arr.length === 1) {
+    el.textContent = arr[0];
+    el.style.color = 'var(--accent-lt)';
+  } else {
+    el.textContent = arr[0] + ' — ' + arr[arr.length - 1] + ' (' + arr.length + ' days)';
+    el.style.color = 'var(--accent-lt)';
+  }
 }
 
 function submitSickLeave() {
   if (!sickDates.length) { alert('Please select at least one date.'); return; }
   var dates = sickDates.join(', ');
   var btn   = document.querySelector('#screen-sick .submit-btn');
-  btn.disabled = true; btn.textContent = 'Submitting…';
+  btn.disabled = true; btn.textContent = 'Submitting\u2026';
   fetch(SCRIPT_URL + '?action=sickleave&token=' + token + '&dates=' + enc(dates))
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -466,21 +510,21 @@ function submitLeaveRequest() {
   var dates   = leaveDates.join(', ');
   var comment = document.getElementById('leave-comment').value.trim();
   var btn     = document.querySelector('#screen-leave .submit-btn');
-  btn.disabled = true; btn.textContent = 'Submitting…';
+  btn.disabled = true; btn.textContent = 'Submitting\u2026';
   fetch(SCRIPT_URL + '?action=leaverequest&token=' + token + '&dates=' + enc(dates) + '&comment=' + enc(comment))
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      if (data.success) showConfirm('Leave request sent', null, 'info', leaveDates.length + ' day(s) · pending approval');
+      if (data.success) showConfirm('Leave request sent', null, 'info', leaveDates.length + ' day(s) \u00b7 pending approval');
       else { alert('Error. Please try again.'); btn.disabled = false; btn.textContent = 'Send request'; }
     })
     .catch(function() { alert('Connection error.'); btn.disabled = false; btn.textContent = 'Send request'; });
 }
 
 function showConfirm(type, time, style, badgeText) {
-  var now = time || formatTime(new Date());
-  document.getElementById('confirm-type').textContent = type;
-  document.getElementById('confirm-time').textContent = now;
-  document.getElementById('confirm-name-line').textContent = staffName + ' · ' + getToday();
+  var t = time || formatTime(new Date());
+  document.getElementById('confirm-type').textContent      = type;
+  document.getElementById('confirm-time').textContent      = t;
+  document.getElementById('confirm-name-line').textContent = staffName + ' \u00b7 ' + getToday();
   document.getElementById('confirm-badge-text').textContent = badgeText;
   document.getElementById('confirm-circle').className = 'confirm-circle ' + style;
   document.getElementById('confirm-badge').className  = 'confirm-badge '  + style;
