@@ -55,8 +55,8 @@
   .status-pill.off    { background: var(--error-bg);   border-color: var(--error);   color: var(--error); }
   .status-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 
-  .section-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
-  .action-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+  .section-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; margin-top: 8px; }
+  .action-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
   .action-btn { width: 100%; background: var(--burgundy-lt); border: 0.5px solid var(--border); border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; gap: 16px; cursor: pointer; text-align: left; }
   .action-btn:active { transform: scale(0.99); }
   .action-btn.disabled { opacity: 0.35; pointer-events: none; }
@@ -65,6 +65,7 @@
   .icon-out  { background: rgba(100,140,200,0.12); }
   .icon-sick { background: rgba(200,149,108,0.12); }
   .icon-lv   { background: rgba(180,120,180,0.10); }
+  .icon-ph   { background: rgba(220,180,100,0.12); }
   .action-text { flex: 1; }
   .action-title { font-size: 15px; font-weight: 400; color: var(--cream); margin-bottom: 2px; }
   .action-sub   { font-size: 11px; color: var(--muted); }
@@ -77,7 +78,6 @@
 
   .field { margin-bottom: 16px; }
   .field label { display: block; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
-  .field textarea { width: 100%; background: var(--burgundy-lt); border: 0.5px solid var(--border); border-radius: 8px; padding: 12px 14px; color: var(--cream); font-family: 'Jost', sans-serif; font-size: 14px; font-weight: 300; outline: none; resize: none; height: 80px; line-height: 1.6; }
 
   .submit-btn { width: 100%; padding: 15px; background: var(--accent); border: none; border-radius: 10px; color: var(--burgundy); font-family: 'Jost', sans-serif; font-size: 14px; font-weight: 500; letter-spacing: 0.06em; cursor: pointer; margin-top: 8px; }
   .submit-btn:active { transform: scale(0.99); }
@@ -144,7 +144,8 @@
     <div class="status-dot"></div>
     <span id="main-status-text">On time</span>
   </div>
-  <div class="section-label">Today&#39;s actions</div>
+
+  <div class="section-label">Today</div>
   <div class="action-list">
     <button class="action-btn" id="btn-checkin" onclick="doCheckin()">
       <div class="action-icon icon-in">
@@ -166,6 +167,10 @@
       </div>
       <div class="action-arrow">&#8250;</div>
     </button>
+  </div>
+
+  <div class="section-label">Time off</div>
+  <div class="action-list">
     <button class="action-btn" onclick="showScreen('screen-sick')">
       <div class="action-icon icon-sick">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="#C8956C" stroke-width="1.2"/><path d="M9 6v4M9 12.5v.5" stroke="#C8956C" stroke-width="1.2" stroke-linecap="round"/></svg>
@@ -176,17 +181,28 @@
       </div>
       <div class="action-arrow">&#8250;</div>
     </button>
-    <button class="action-btn" onclick="showScreen('screen-leave')">
+    <button class="action-btn" onclick="showScreen('screen-annual')">
       <div class="action-icon icon-lv">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="4" width="14" height="12" rx="2" stroke="#C4A0C4" stroke-width="1.2"/><path d="M6 3v2M12 3v2M2 8h14" stroke="#C4A0C4" stroke-width="1.2" stroke-linecap="round"/></svg>
       </div>
       <div class="action-text">
-        <div class="action-title">Leave request</div>
-        <div class="action-sub">Annual leave &#183; request approval</div>
+        <div class="action-title">Annual leave</div>
+        <div class="action-sub">Already agreed with manager</div>
+      </div>
+      <div class="action-arrow">&#8250;</div>
+    </button>
+    <button class="action-btn" onclick="showScreen('screen-phoff')">
+      <div class="action-icon icon-ph">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2l1.5 4.5h4.5l-3.5 3 1.5 4.5L9 11.5 5 14l1.5-4.5L3 6.5h4.5z" stroke="#E8C4A8" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="action-text">
+        <div class="action-title">Public holiday off</div>
+        <div class="action-sub">Compensatory day for PH worked</div>
       </div>
       <div class="action-arrow">&#8250;</div>
     </button>
   </div>
+
   <div class="geo-error" id="geo-error">You appear to be outside the clinic. Check-in requires you to be on-site (within 50 m).</div>
 </div>
 
@@ -203,20 +219,28 @@
   <button class="submit-btn" onclick="submitSickLeave()">Submit notice</button>
 </div>
 
-<div class="screen" id="screen-leave">
+<div class="screen" id="screen-annual">
   <button class="form-back" onclick="showScreen('screen-main')">&#8249; Back</button>
-  <div class="form-title">Leave request</div>
-  <div class="form-subtitle">Tap the first day, then the last day of your leave. All days in between will be included.</div>
+  <div class="form-title">Annual leave</div>
+  <div class="form-subtitle">Record your approved annual leave. Only submit dates that have already been agreed with the manager.</div>
   <div class="field">
     <label>Select date(s)</label>
-    <div class="cal-wrap" id="leave-cal"></div>
-    <div class="cal-selected" id="leave-selected">No dates selected</div>
+    <div class="cal-wrap" id="annual-cal"></div>
+    <div class="cal-selected" id="annual-selected">No dates selected</div>
   </div>
+  <button class="submit-btn" onclick="submitAnnualLeave()">Record leave</button>
+</div>
+
+<div class="screen" id="screen-phoff">
+  <button class="form-back" onclick="showScreen('screen-main')">&#8249; Back</button>
+  <div class="form-title">Public holiday off</div>
+  <div class="form-subtitle">Record your compensatory day off for working a public holiday. Only submit dates that have already been agreed with the manager.</div>
   <div class="field">
-    <label>Comment (optional)</label>
-    <textarea id="leave-comment" placeholder="Any notes for your manager&#8230;"></textarea>
+    <label>Select date(s)</label>
+    <div class="cal-wrap" id="phoff-cal"></div>
+    <div class="cal-selected" id="phoff-selected">No dates selected</div>
   </div>
-  <button class="submit-btn" onclick="submitLeaveRequest()">Send request</button>
+  <button class="submit-btn" onclick="submitPHOff()">Record day off</button>
 </div>
 
 <div class="screen" id="screen-confirm">
@@ -235,7 +259,7 @@
 </div>
 
 <script>
-var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwmJNilWUvMfEYWfcbZ02Mm_ReHgTVwbDdF4wB66JFlvhcDZQei-1Kygez1PHPVwDsP/exec';
+var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxNXCpZW7UFaaYYiA_kaSxmOZzqaioDLCX15vmsMW5tNiRQRzP6dCY7I8zl0c086iba-A/exec';
 var CLINIC_LAT = 25.139103;
 var CLINIC_LNG = 55.2052463;
 var RADIUS_M   = 50;
@@ -246,7 +270,8 @@ var token             = '';
 var alreadyCheckedIn  = false;
 var alreadyCheckedOut = false;
 var sickDates         = [];
-var leaveDates        = [];
+var annualDates       = [];
+var phoffDates        = [];
 var calRangeStart     = {};
 
 window.addEventListener('DOMContentLoaded', function() {
@@ -265,9 +290,7 @@ function updateHeaderDate() {
   document.getElementById('header-date').innerHTML = days[now.getDay()] + ', ' + now.getDate() + ' ' + months[now.getMonth()] + '<br>' + formatTime(now);
 }
 
-function formatTime(d) {
-  return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-}
+function formatTime(d) { return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
 
 function fetchMe() {
   fetch(SCRIPT_URL + '?action=getMe&token=' + token)
@@ -292,6 +315,8 @@ function renderMainScreen() {
   document.getElementById('main-name').textContent = staffName;
   var pill = document.getElementById('main-status-pill');
   var text = document.getElementById('main-status-text');
+  document.getElementById('btn-checkin').classList.remove('disabled');
+  document.getElementById('btn-checkout').classList.remove('disabled');
 
   if (!todayShift) {
     document.getElementById('main-shift').textContent = 'Today is your day off';
@@ -366,14 +391,18 @@ function callAction(action) {
     .catch(function() { alert('Connection error. Please try again.'); });
 }
 
-// ── CALENDAR ──
+// CALENDAR
 function buildCalendar(cid, sid) {
   var now   = new Date();
   var year  = now.getFullYear();
   var month = now.getMonth();
   calRangeStart[cid] = null;
 
-  function getArr() { return cid.indexOf('sick') >= 0 ? sickDates : leaveDates; }
+  function getArr() {
+    if (cid.indexOf('sick') >= 0)   return sickDates;
+    if (cid.indexOf('annual') >= 0) return annualDates;
+    return phoffDates;
+  }
 
   function render() {
     var wrap = document.getElementById(cid);
@@ -385,7 +414,7 @@ function buildCalendar(cid, sid) {
     var mNames   = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     var todayStr = dkey(now.getFullYear(), now.getMonth(), now.getDate());
 
-    var hint = rs ? 'Now tap the last date' : (arr.length ? 'Tap any date to reset and start over' : 'Tap the first date of your absence');
+    var hint = rs ? 'Now tap the last date' : (arr.length ? 'Tap any date to reset and start over' : 'Tap the first date');
 
     var h = '<div class="cal-nav">'
       + '<button class="cal-nav-btn" onclick="calMove(\'' + cid + '\',\'' + sid + '\',-1)">&#8249;</button>'
@@ -426,24 +455,18 @@ function buildCalendar(cid, sid) {
   };
 }
 
-function calMove(cid, sid, dir) {
-  if (window['_cm_' + cid]) window['_cm_' + cid](dir);
-}
-
-function dkey(y, m, d) {
-  return pad(d) + '.' + pad(m + 1) + '.' + y;
-}
-
-function dkeyToDate(k) {
-  var p = k.split('.');
-  return new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
-}
+function calMove(cid, sid, dir) { if (window['_cm_' + cid]) window['_cm_' + cid](dir); }
+function dkey(y, m, d) { return pad(d) + '.' + pad(m + 1) + '.' + y; }
+function dkeyToDate(k) { var p = k.split('.'); return new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0])); }
 
 function pickDate(key, cid, sid) {
-  var arr = cid.indexOf('sick') >= 0 ? sickDates : leaveDates;
-  var rs  = calRangeStart[cid];
+  var arr;
+  if (cid.indexOf('sick') >= 0)        arr = sickDates;
+  else if (cid.indexOf('annual') >= 0) arr = annualDates;
+  else                                 arr = phoffDates;
 
-  // If range already selected — reset and start fresh
+  var rs = calRangeStart[cid];
+
   if (arr.length > 0 && !rs) {
     arr.length = 0;
     calRangeStart[cid] = key;
@@ -452,14 +475,12 @@ function pickDate(key, cid, sid) {
     return;
   }
 
-  // First tap
   if (!rs) {
     calRangeStart[cid] = key;
     if (window['_cr_' + cid]) window['_cr_' + cid]();
     return;
   }
 
-  // Second tap — fill range
   var start = dkeyToDate(rs);
   var end   = dkeyToDate(key);
   if (end < start) { var tmp = start; start = end; end = tmp; }
@@ -486,7 +507,7 @@ function updateSelected(arr, sid) {
     el.textContent = arr[0];
     el.style.color = 'var(--accent-lt)';
   } else {
-    el.textContent = arr[0] + ' — ' + arr[arr.length - 1] + ' (' + arr.length + ' days)';
+    el.textContent = arr[0] + ' \u2014 ' + arr[arr.length - 1] + ' (' + arr.length + ' days)';
     el.style.color = 'var(--accent-lt)';
   }
 }
@@ -495,7 +516,7 @@ function submitSickLeave() {
   if (!sickDates.length) { alert('Please select at least one date.'); return; }
   var dates = sickDates.join(', ');
   var btn   = document.querySelector('#screen-sick .submit-btn');
-  btn.disabled = true; btn.textContent = 'Submitting\u2026';
+  btn.disabled = true; btn.textContent = 'Submitting...';
   fetch(SCRIPT_URL + '?action=sickleave&token=' + token + '&dates=' + enc(dates))
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -505,19 +526,32 @@ function submitSickLeave() {
     .catch(function() { alert('Connection error.'); btn.disabled = false; btn.textContent = 'Submit notice'; });
 }
 
-function submitLeaveRequest() {
-  if (!leaveDates.length) { alert('Please select at least one date.'); return; }
-  var dates   = leaveDates.join(', ');
-  var comment = document.getElementById('leave-comment').value.trim();
-  var btn     = document.querySelector('#screen-leave .submit-btn');
-  btn.disabled = true; btn.textContent = 'Submitting\u2026';
-  fetch(SCRIPT_URL + '?action=leaverequest&token=' + token + '&dates=' + enc(dates) + '&comment=' + enc(comment))
+function submitAnnualLeave() {
+  if (!annualDates.length) { alert('Please select at least one date.'); return; }
+  var dates = annualDates.join(', ');
+  var btn   = document.querySelector('#screen-annual .submit-btn');
+  btn.disabled = true; btn.textContent = 'Submitting...';
+  fetch(SCRIPT_URL + '?action=annualleave&token=' + token + '&dates=' + enc(dates))
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      if (data.success) showConfirm('Leave request sent', null, 'info', leaveDates.length + ' day(s) \u00b7 pending approval');
-      else { alert('Error. Please try again.'); btn.disabled = false; btn.textContent = 'Send request'; }
+      if (data.success) showConfirm('Annual leave recorded', null, 'info', annualDates.length + ' day(s)');
+      else { alert('Error. Please try again.'); btn.disabled = false; btn.textContent = 'Record leave'; }
     })
-    .catch(function() { alert('Connection error.'); btn.disabled = false; btn.textContent = 'Send request'; });
+    .catch(function() { alert('Connection error.'); btn.disabled = false; btn.textContent = 'Record leave'; });
+}
+
+function submitPHOff() {
+  if (!phoffDates.length) { alert('Please select at least one date.'); return; }
+  var dates = phoffDates.join(', ');
+  var btn   = document.querySelector('#screen-phoff .submit-btn');
+  btn.disabled = true; btn.textContent = 'Submitting...';
+  fetch(SCRIPT_URL + '?action=phoff&token=' + token + '&dates=' + enc(dates))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) showConfirm('PH day off recorded', null, 'info', phoffDates.length + ' day(s)');
+      else { alert('Error. Please try again.'); btn.disabled = false; btn.textContent = 'Record day off'; }
+    })
+    .catch(function() { alert('Connection error.'); btn.disabled = false; btn.textContent = 'Record day off'; });
 }
 
 function showConfirm(type, time, style, badgeText) {
@@ -542,8 +576,9 @@ function showConfirm(type, time, style, badgeText) {
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
   document.getElementById(id).classList.add('active');
-  if (id === 'screen-sick')  { sickDates  = []; setTimeout(function() { buildCalendar('sick-cal',  'sick-selected');  }, 50); }
-  if (id === 'screen-leave') { leaveDates = []; setTimeout(function() { buildCalendar('leave-cal', 'leave-selected'); }, 50); }
+  if (id === 'screen-sick')   { sickDates   = []; setTimeout(function() { buildCalendar('sick-cal',   'sick-selected');   }, 50); }
+  if (id === 'screen-annual') { annualDates = []; setTimeout(function() { buildCalendar('annual-cal', 'annual-selected'); }, 50); }
+  if (id === 'screen-phoff')  { phoffDates  = []; setTimeout(function() { buildCalendar('phoff-cal',  'phoff-selected');  }, 50); }
 }
 
 function showError(msg) {
