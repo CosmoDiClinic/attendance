@@ -412,7 +412,7 @@ function buildCalendar(cid, sid) {
     var firstDay = new Date(year, month, 1).getDay();
     var daysIn   = new Date(year, month + 1, 0).getDate();
     var mNames   = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    var todayStr = dkey(now.getFullYear(), now.getMonth(), now.getDate());
+    var todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     var hint = rs ? 'Now tap the last date' : (arr.length ? 'Tap any date to reset and start over' : 'Tap the first date');
 
@@ -430,7 +430,8 @@ function buildCalendar(cid, sid) {
 
     for (var d = 1; d <= daysIn; d++) {
       var key = dkey(year, month, d);
-      var isPast = key < todayStr;
+      var cellDate = new Date(year, month, d);
+      var isPast = cellDate < todayDate;
       if (isPast) {
         h += '<div class="cal-day past">' + d + '</div>';
       } else {
