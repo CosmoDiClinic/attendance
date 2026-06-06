@@ -66,6 +66,7 @@
   .icon-sick { background: rgba(200,149,108,0.12); }
   .icon-lv   { background: rgba(180,120,180,0.10); }
   .icon-ph   { background: rgba(220,180,100,0.12); }
+  .icon-br   { background: rgba(232,184,108,0.12); }
   .action-text { flex: 1; }
   .action-title { font-size: 15px; font-weight: 400; color: var(--cream); margin-bottom: 2px; }
   .action-sub   { font-size: 11px; color: var(--muted); }
@@ -164,6 +165,30 @@
       <div class="action-text">
         <div class="action-title">Check out</div>
         <div class="action-sub">End of shift</div>
+      </div>
+      <div class="action-arrow">&#8250;</div>
+    </button>
+  </div>
+
+  <div class="section-label">Break</div>
+  <div class="action-list">
+    <button class="action-btn" id="btn-breakstart" onclick="doBreakStart()">
+      <div class="action-icon icon-br">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 7v6a2 2 0 002 2h6a2 2 0 002-2V7" stroke="#E8B86C" stroke-width="1.2" stroke-linecap="round"/><path d="M13 9h1.5a1.5 1.5 0 010 3H13" stroke="#E8B86C" stroke-width="1.2" stroke-linecap="round"/><path d="M5 4v1M7.5 4v1M10 4v1" stroke="#E8B86C" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="action-text">
+        <div class="action-title">Start break</div>
+        <div class="action-sub" id="breakstart-sub">Up to 3 breaks per day · 30 min total</div>
+      </div>
+      <div class="action-arrow">&#8250;</div>
+    </button>
+    <button class="action-btn disabled" id="btn-breakend" onclick="doBreakEnd()">
+      <div class="action-icon icon-br">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="#E8B86C" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="action-text">
+        <div class="action-title">End break</div>
+        <div class="action-sub" id="breakend-sub">After at least 5 minutes</div>
       </div>
       <div class="action-arrow">&#8250;</div>
     </button>
@@ -269,6 +294,9 @@ var todayShift        = null;
 var token             = '';
 var alreadyCheckedIn  = false;
 var alreadyCheckedOut = false;
+var breakStartsCount  = 0;
+var breakEndsCount    = 0;
+var onBreak           = false;
 var sickDates         = [];
 var annualDates       = [];
 var phoffDates        = [];
@@ -306,6 +334,9 @@ function fetchMe() {
       if (!status) return;
       alreadyCheckedIn  = status.checkedIn  || false;
       alreadyCheckedOut = status.checkedOut || false;
+      breakStartsCount  = status.breakStarts || 0;
+      breakEndsCount    = status.breakEnds   || 0;
+      onBreak           = status.onBreak     || false;
       renderMainScreen();
     })
     .catch(function() { showError('Connection error. Please check your internet and try again.'); });
@@ -317,6 +348,8 @@ function renderMainScreen() {
   var text = document.getElementById('main-status-text');
   document.getElementById('btn-checkin').classList.remove('disabled');
   document.getElementById('btn-checkout').classList.remove('disabled');
+  document.getElementById('btn-breakstart').classList.remove('disabled');
+  document.getElementById('btn-breakend').classList.remove('disabled');
 
   if (!todayShift) {
     document.getElementById('main-shift').textContent = 'Today is your day off';
@@ -324,11 +357,15 @@ function renderMainScreen() {
     text.textContent = 'Day off';
     document.getElementById('btn-checkin').classList.add('disabled');
     document.getElementById('btn-checkout').classList.add('disabled');
+    document.getElementById('btn-breakstart').classList.add('disabled');
+    document.getElementById('btn-breakend').classList.add('disabled');
   } else if (alreadyCheckedIn && alreadyCheckedOut) {
     document.getElementById('main-shift').innerHTML = 'Shift today &#8212; <span>' + todayShift.start + ' &#8211; ' + todayShift.finish + '</span>';
     document.getElementById('checkin-sub').textContent = 'Already checked in today';
     document.getElementById('btn-checkin').classList.add('disabled');
     document.getElementById('btn-checkout').classList.add('disabled');
+    document.getElementById('btn-breakstart').classList.add('disabled');
+    document.getElementById('btn-breakend').classList.add('disabled');
     pill.className = 'status-pill ontime';
     text.textContent = 'Shift complete';
   } else if (alreadyCheckedIn) {
@@ -336,12 +373,37 @@ function renderMainScreen() {
     document.getElementById('checkin-sub').textContent = 'Already checked in today';
     document.getElementById('btn-checkin').classList.add('disabled');
     pill.className = 'status-pill ontime';
-    text.textContent = 'Checked in';
+    text.textContent = onBreak ? 'On break' : 'Checked in';
   } else {
     document.getElementById('main-shift').innerHTML = 'Shift today &#8212; <span>' + todayShift.start + ' &#8211; ' + todayShift.finish + '</span>';
     document.getElementById('checkin-sub').textContent = 'Scheduled ' + todayShift.start + ' · requires your location';
     updateStatusPill();
+    document.getElementById('btn-breakstart').classList.add('disabled');
+    document.getElementById('btn-breakend').classList.add('disabled');
   }
+
+  // Логика брейк-кнопок: доступны только если checked in и не checked out
+  if (alreadyCheckedIn && !alreadyCheckedOut) {
+    var startSub = document.getElementById('breakstart-sub');
+    var endSub   = document.getElementById('breakend-sub');
+    var remaining = 3 - breakStartsCount;
+
+    if (onBreak) {
+      document.getElementById('btn-breakstart').classList.add('disabled');
+      startSub.textContent = 'You are on break now';
+      endSub.textContent = 'Tap to end your current break';
+    } else {
+      document.getElementById('btn-breakend').classList.add('disabled');
+      if (breakStartsCount >= 3) {
+        document.getElementById('btn-breakstart').classList.add('disabled');
+        startSub.textContent = 'No breaks remaining today';
+      } else {
+        startSub.textContent = remaining + ' break(s) remaining today';
+      }
+      endSub.textContent = 'After at least 5 minutes';
+    }
+  }
+
   showScreen('screen-main');
 }
 
@@ -374,6 +436,31 @@ function doCheckin() {
 }
 
 function doCheckout() { callAction('checkout'); }
+
+function doBreakStart() {
+  fetch(SCRIPT_URL + '?action=breakstart&token=' + token)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) { alert(data.error); return; }
+      onBreak = true;
+      breakStartsCount++;
+      showConfirm('Break started', data.time, 'warning', 'On break');
+    })
+    .catch(function() { alert('Connection error. Please try again.'); });
+}
+
+function doBreakEnd() {
+  fetch(SCRIPT_URL + '?action=breakend&token=' + token)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) { alert(data.error); return; }
+      onBreak = false;
+      breakEndsCount++;
+      var msg = 'Break: ' + data.durationMin + ' min · Total today: ' + data.totalToday + ' min';
+      showConfirm('Break ended', data.time, 'info', msg);
+    })
+    .catch(function() { alert('Connection error. Please try again.'); });
+}
 
 function callAction(action) {
   fetch(SCRIPT_URL + '?action=' + action + '&token=' + token)
