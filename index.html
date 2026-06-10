@@ -435,7 +435,28 @@ function doCheckin() {
   );
 }
 
-function doCheckout() { callAction('checkout'); }
+function doCheckout(reason) {
+  var url = SCRIPT_URL + '?action=checkout&token=' + token;
+  if (reason) url += '&reason=' + encodeURIComponent(reason);
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.needReason) {
+        // Переработка больше 10 минут — спрашиваем причину
+        var r = prompt('You worked ' + data.diffMin + ' minutes of overtime.\n\nPlease enter the reason. Note: overtime is only counted after the clinic manager approves it.');
+        if (r === null || r.trim() === '') {
+          alert('Overtime reason is required to check out.');
+          return;
+        }
+        doCheckout(r.trim());
+        return;
+      }
+      if (data.error) { alert(data.error); return; }
+      alreadyCheckedOut = true;
+      showConfirm('Check-out recorded', data.time, 'info', 'Shift ended');
+    })
+    .catch(function() { alert('Connection error. Please try again.'); });
+}
 
 function doBreakStart() {
   fetch(SCRIPT_URL + '?action=breakstart&token=' + token)
