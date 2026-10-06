@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Cosmo Di — Attendance</title>
+<title>Cosmo Di – Attendance</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -98,6 +98,7 @@
   .cal-day.past { color: rgba(255,255,255,0.2); cursor: default; pointer-events: none; }
   .cal-selected { font-size: 12px; color: rgba(255,255,255,0.3); line-height: 1.6; min-height: 18px; margin-bottom: 4px; }
 
+  .sync-banner { background: var(--warn-bg); border: 0.5px solid var(--warn); border-radius: 8px; padding: 12px 16px; font-size: 12px; color: var(--warn); line-height: 1.6; margin-bottom: 20px; display: none; }
   .geo-error { background: var(--error-bg); border: 0.5px solid var(--error); border-radius: 8px; padding: 14px 16px; font-size: 13px; color: var(--error); line-height: 1.6; margin-bottom: 16px; display: none; }
 
   #screen-confirm { align-items: center; text-align: center; }
@@ -145,6 +146,7 @@
     <div class="status-dot"></div>
     <span id="main-status-text">On time</span>
   </div>
+  <div class="sync-banner" id="sync-banner"></div>
 
   <div class="section-label">Today</div>
   <div class="action-list">
@@ -228,7 +230,7 @@
     </button>
   </div>
 
-  <div class="geo-error" id="geo-error">You appear to be outside the clinic. Check-in requires you to be on-site (within 50 m).</div>
+  <div class="geo-error" id="geo-error">You appear to be outside the clinic. Check-in requires you to be on-site (within 150 m).</div>
 </div>
 
 <div class="screen" id="screen-sick">
@@ -308,7 +310,12 @@ window.addEventListener('DOMContentLoaded', function() {
   var params = new URLSearchParams(window.location.search);
   token = (params.get('who') || '').toLowerCase().trim();
   if (!token) { showError('No personal link detected. Please use the link sent to you via WhatsApp.'); return; }
+  ME_KEY = 'cd_me_' + token; Q_KEY = 'cd_queue_' + token; ST_KEY = 'cd_state_' + token;
   fetchMe();
+  // Раз в минуту, при возврате связи и при открытии вкладки пробуем дослать сохранённые отметки
+  setInterval(flushQueue, 60000);
+  window.addEventListener('online', flushQueue);
+  document.addEventListener('visibilitychange', function() { if (!document.hidden) flushQueue(); });
 });
 
 function updateHeaderDate() {
@@ -320,26 +327,136 @@ function updateHeaderDate() {
 
 function formatTime(d) { return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
 
+// ===== СВЯЗЬ СО СКРИПТОМ: повторы, кэш, офлайн-очередь =====
+var ME_KEY = '', Q_KEY = '', ST_KEY = '';
+var offlineMode = false;
+var flushing = false;
+
+function lsGet(k, def) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch (e) { return def; } }
+function lsSet(k, v)   { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function sleep(ms)     { return new Promise(function(res) { setTimeout(res, ms); }); }
+
+// Запрос к скрипту. Google иногда отвечает ошибкой, а через пару секунд всё проходит,
+// поэтому пробуем до 3 раз с паузами 2 и 5 секунд.
+function api(query, attempts) {
+  attempts = attempts || 3;
+  var delays = [0, 2000, 5000];
+  var i = 0;
+  function attempt() {
+    return sleep(delays[i] || 5000)
+      .then(function() { return fetch(SCRIPT_URL + '?' + query + '&_=' + Date.now()); })
+      .then(function(r) { return r.json(); })
+      .catch(function(err) {
+        i++;
+        if (i < attempts) return attempt();
+        throw err;
+      });
+  }
+  return attempt();
+}
+
+function nowHHMM() { var d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+function toMin(hhmm) { var p = hhmm.split(':'); return parseInt(p[0]) * 60 + parseInt(p[1]); }
+
+function shiftFromWeek(week) {
+  if (!week) return null;
+  var s = week[String(new Date().getDay())];
+  return s || null;
+}
+
+function applyStatus(st) {
+  alreadyCheckedIn  = st.checkedIn   || false;
+  alreadyCheckedOut = st.checkedOut  || false;
+  breakStartsCount  = st.breakStarts || 0;
+  breakEndsCount    = st.breakEnds   || 0;
+  onBreak           = st.onBreak     || false;
+}
+
+function saveState() {
+  lsSet(ST_KEY, { date: getToday(), checkedIn: alreadyCheckedIn, checkedOut: alreadyCheckedOut,
+                  breakStarts: breakStartsCount, breakEnds: breakEndsCount, onBreak: onBreak });
+}
+
+function useLocalState() {
+  var st = lsGet(ST_KEY, null);
+  if (st && st.date === getToday()) applyStatus(st);
+  else applyStatus({});
+}
+
 function fetchMe() {
-  fetch(SCRIPT_URL + '?action=getMe&token=' + token)
-    .then(function(r) { return r.json(); })
+  api('action=getMe&token=' + token)
     .then(function(data) {
-      if (data.error) { showError('This link is not recognised. Please contact your manager.'); return null; }
+      if (data.error) { showError('This link is not recognised. Please contact your manager.'); return; }
       staffName  = data.name;
       todayShift = data.shift;
-      return fetch(SCRIPT_URL + '?action=getStatus&token=' + token);
+      offlineMode = false;
+      lsSet(ME_KEY, { name: data.name, week: data.week || null });
+      // Сначала досылаем то, что сохранилось на телефоне, потом берём статус с сервера
+      return flushQueue().then(function() {
+        return api('action=getStatus&token=' + token);
+      }).then(function(st) {
+        if (lsGet(Q_KEY, []).length) useLocalState(); // что-то ещё не доехало – верим телефону
+        else { applyStatus(st); saveState(); }
+        renderMainScreen();
+      }).catch(function() {
+        useLocalState();
+        renderMainScreen();
+      });
     })
-    .then(function(r) { return r ? r.json() : null; })
-    .then(function(status) {
-      if (!status) return;
-      alreadyCheckedIn  = status.checkedIn  || false;
-      alreadyCheckedOut = status.checkedOut || false;
-      breakStartsCount  = status.breakStarts || 0;
-      breakEndsCount    = status.breakEnds   || 0;
-      onBreak           = status.onBreak     || false;
+    .catch(function() {
+      // Скрипт недоступен – работаем по сохранённым на телефоне данным
+      var me = lsGet(ME_KEY, null);
+      if (!me) { showError('Connection error. Please check your internet and try again.'); return; }
+      staffName   = me.name;
+      todayShift  = shiftFromWeek(me.week);
+      offlineMode = true;
+      useLocalState();
       renderMainScreen();
-    })
-    .catch(function() { showError('Connection error. Please check your internet and try again.'); });
+    });
+}
+
+function queueAction(action, reason) {
+  var q = lsGet(Q_KEY, []);
+  q.push({ action: action, d: getToday(), t: nowHHMM(), reason: reason || '' });
+  lsSet(Q_KEY, q);
+}
+
+// Досылает сохранённые отметки по одной, в том порядке, в котором их нажимали
+function flushQueue() {
+  if (flushing || !Q_KEY) return Promise.resolve();
+  if (!lsGet(Q_KEY, []).length) { updateSyncBanner(); return Promise.resolve(); }
+  flushing = true;
+  function next() {
+    var q = lsGet(Q_KEY, []);
+    if (!q.length) { flushing = false; offlineMode = false; updateSyncBanner(); return Promise.resolve(); }
+    var it = q[0];
+    var qs = 'action=' + it.action + '&token=' + token + '&queued=1&d=' + enc(it.d) + '&t=' + enc(it.t)
+           + (it.reason ? '&reason=' + enc(it.reason) : '');
+    return api(qs, 2).then(function() {
+      // Любой ответ скрипта (записано или «уже отмечено») – убираем из очереди
+      var q2 = lsGet(Q_KEY, []); q2.shift(); lsSet(Q_KEY, q2);
+      return next();
+    }).catch(function() {
+      flushing = false;
+      updateSyncBanner();
+    });
+  }
+  return next();
+}
+
+function updateSyncBanner() {
+  var el = document.getElementById('sync-banner');
+  if (!el) return;
+  var n = Q_KEY ? lsGet(Q_KEY, []).length : 0;
+  if (n > 0) {
+    el.textContent = n + ' action(s) saved on this phone. They will be sent automatically when the connection is back. You do not need to tap again.';
+    el.style.display = 'block';
+  } else if (offlineMode) {
+    el.textContent = 'Connection to the system is unstable right now. You can still tap your buttons – they will be saved on this phone and sent automatically.';
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
 }
 
 function renderMainScreen() {
@@ -404,6 +521,7 @@ function renderMainScreen() {
     }
   }
 
+  updateSyncBanner();
   showScreen('screen-main');
 }
 
@@ -422,81 +540,83 @@ function updateStatusPill() {
 
 function doCheckin() {
   document.getElementById('geo-error').style.display = 'none';
-  if (!navigator.geolocation) { callAction('checkin'); return; }
+  if (!navigator.geolocation) { performAction('checkin'); return; }
   navigator.geolocation.getCurrentPosition(
     function(pos) {
       if (haversine(pos.coords.latitude, pos.coords.longitude, CLINIC_LAT, CLINIC_LNG) > RADIUS_M) {
         document.getElementById('geo-error').style.display = 'block'; return;
       }
-      callAction('checkin');
+      performAction('checkin');
     },
-    function() { callAction('checkin'); },
+    function() { performAction('checkin'); },
     { enableHighAccuracy: true, timeout: 10000 }
   );
 }
 
-function doCheckout(reason) {
-  var url = SCRIPT_URL + '?action=checkout&token=' + token;
-  if (reason) url += '&reason=' + encodeURIComponent(reason);
-  fetch(url)
-    .then(function(r) { return r.json(); })
+function doCheckout(reason) { performAction('checkout', reason); }
+function doBreakStart()     { performAction('breakstart'); }
+function doBreakEnd()       { performAction('breakend'); }
+
+var actionBusy = false;
+
+function performAction(action, reason) {
+  if (actionBusy) return;
+  actionBusy = true;
+  var qs = 'action=' + action + '&token=' + token + (reason ? '&reason=' + enc(reason) : '');
+  api(qs)
     .then(function(data) {
+      actionBusy = false;
       if (data.needReason) {
-        // Переработка больше 10 минут — спрашиваем причину
         var r = prompt('You worked ' + data.diffMin + ' minutes of overtime.\n\nPlease enter the reason. Note: overtime is only counted after the clinic manager approves it.');
-        if (r === null || r.trim() === '') {
-          alert('Overtime reason is required to check out.');
-          return;
-        }
-        doCheckout(r.trim());
+        if (r === null || r.trim() === '') { alert('Overtime reason is required to check out.'); return; }
+        performAction('checkout', r.trim());
         return;
       }
       if (data.error) { alert(data.error); return; }
-      alreadyCheckedOut = true;
-      showConfirm('Check-out recorded', data.time, 'info', 'Shift ended');
+      offlineMode = false;
+      onActionDone(action, data, false);
     })
-    .catch(function() { alert('Connection error. Please try again.'); });
+    .catch(function() {
+      // Скрипт не ответил даже после повторов – сохраняем отметку на телефоне с реальным временем
+      actionBusy = false;
+      queueAction(action, reason);
+      offlineMode = true;
+      onActionDone(action, { time: nowHHMM() }, true);
+    });
 }
 
-function doBreakStart() {
-  fetch(SCRIPT_URL + '?action=breakstart&token=' + token)
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.error) { alert(data.error); return; }
-      onBreak = true;
-      breakStartsCount++;
-      showConfirm('Break started', data.time, 'warning', 'On break');
-    })
-    .catch(function() { alert('Connection error. Please try again.'); });
-}
-
-function doBreakEnd() {
-  fetch(SCRIPT_URL + '?action=breakend&token=' + token)
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.error) { alert(data.error); return; }
-      onBreak = false;
-      breakEndsCount++;
-      var msg = 'Break: ' + data.durationMin + ' min · Total today: ' + data.totalToday + ' min';
-      showConfirm('Break ended', data.time, 'info', msg);
-    })
-    .catch(function() { alert('Connection error. Please try again.'); });
-}
-
-function callAction(action) {
-  fetch(SCRIPT_URL + '?action=' + action + '&token=' + token)
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.error) { alert(data.error); return; }
-      var isLate = data.lateMinutes > 0;
-      var type   = action === 'checkin' ? 'Check-in recorded' : 'Check-out recorded';
-      var badge  = action === 'checkin' ? (isLate ? data.lateMinutes + ' min late' : 'On time') : 'Shift ended';
-      var style  = action === 'checkout' ? 'info' : (isLate ? 'warning' : 'success');
-      if (action === 'checkin')  alreadyCheckedIn  = true;
-      if (action === 'checkout') alreadyCheckedOut = true;
-      showConfirm(type, data.time, style, badge);
-    })
-    .catch(function() { alert('Connection error. Please try again.'); });
+function onActionDone(action, data, queued) {
+  var title, style, badge;
+  if (action === 'checkin') {
+    alreadyCheckedIn = true;
+    var late = data.lateMinutes;
+    if (queued && todayShift && todayShift.start) late = toMin(nowHHMM()) - toMin(todayShift.start);
+    late = late > 0 ? late : 0;
+    title = queued ? 'Check-in saved' : 'Check-in recorded';
+    badge = late > 0 ? late + ' min late' : 'On time';
+    style = late > 0 ? 'warning' : 'success';
+  } else if (action === 'checkout') {
+    alreadyCheckedOut = true;
+    onBreak = false;
+    title = queued ? 'Check-out saved' : 'Check-out recorded';
+    badge = 'Shift ended';
+    style = 'info';
+  } else if (action === 'breakstart') {
+    onBreak = true;
+    breakStartsCount++;
+    title = queued ? 'Break start saved' : 'Break started';
+    badge = 'On break';
+    style = 'warning';
+  } else {
+    onBreak = false;
+    breakEndsCount++;
+    title = queued ? 'Break end saved' : 'Break ended';
+    badge = queued ? 'Back to work' : ('Break: ' + data.durationMin + ' min · Total today: ' + data.totalToday + ' min');
+    style = 'info';
+  }
+  if (queued) badge += ' · will sync automatically';
+  saveState();
+  showConfirm(title, data.time, style, badge);
 }
 
 // CALENDAR
@@ -626,13 +746,12 @@ function submitSickLeave() {
   var dates = sickDates.join(', ');
   var btn   = document.querySelector('#screen-sick .submit-btn');
   btn.disabled = true; btn.textContent = 'Submitting...';
-  fetch(SCRIPT_URL + '?action=sickleave&token=' + token + '&dates=' + enc(dates))
-    .then(function(r) { return r.json(); })
+  api('action=sickleave&token=' + token + '&dates=' + enc(dates))
     .then(function(data) {
       if (data.success) showConfirm('Sick leave submitted', null, 'info', sickDates.length + ' day(s) submitted');
       else { alert('Error. Please try again.'); btn.disabled = false; btn.textContent = 'Submit notice'; }
     })
-    .catch(function() { alert('Connection error.'); btn.disabled = false; btn.textContent = 'Submit notice'; });
+    .catch(function() { alert('The system did not respond. Please try again in a few minutes.'); btn.disabled = false; btn.textContent = 'Submit notice'; });
 }
 
 function submitAnnualLeave() {
@@ -640,13 +759,12 @@ function submitAnnualLeave() {
   var dates = annualDates.join(', ');
   var btn   = document.querySelector('#screen-annual .submit-btn');
   btn.disabled = true; btn.textContent = 'Submitting...';
-  fetch(SCRIPT_URL + '?action=annualleave&token=' + token + '&dates=' + enc(dates))
-    .then(function(r) { return r.json(); })
+  api('action=annualleave&token=' + token + '&dates=' + enc(dates))
     .then(function(data) {
       if (data.success) showConfirm('Annual leave recorded', null, 'info', annualDates.length + ' day(s)');
       else { alert('Error. Please try again.'); btn.disabled = false; btn.textContent = 'Record leave'; }
     })
-    .catch(function() { alert('Connection error.'); btn.disabled = false; btn.textContent = 'Record leave'; });
+    .catch(function() { alert('The system did not respond. Please try again in a few minutes.'); btn.disabled = false; btn.textContent = 'Record leave'; });
 }
 
 function submitPHOff() {
@@ -654,13 +772,12 @@ function submitPHOff() {
   var dates = phoffDates.join(', ');
   var btn   = document.querySelector('#screen-phoff .submit-btn');
   btn.disabled = true; btn.textContent = 'Submitting...';
-  fetch(SCRIPT_URL + '?action=phoff&token=' + token + '&dates=' + enc(dates))
-    .then(function(r) { return r.json(); })
+  api('action=phoff&token=' + token + '&dates=' + enc(dates))
     .then(function(data) {
       if (data.success) showConfirm('PH day off recorded', null, 'info', phoffDates.length + ' day(s)');
       else { alert('Error. Please try again.'); btn.disabled = false; btn.textContent = 'Record day off'; }
     })
-    .catch(function() { alert('Connection error.'); btn.disabled = false; btn.textContent = 'Record day off'; });
+    .catch(function() { alert('The system did not respond. Please try again in a few minutes.'); btn.disabled = false; btn.textContent = 'Record day off'; });
 }
 
 function showConfirm(type, time, style, badgeText) {
