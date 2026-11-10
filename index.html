@@ -166,7 +166,7 @@
       </div>
       <div class="action-text">
         <div class="action-title">Check out</div>
-        <div class="action-sub">End of shift</div>
+        <div class="action-sub" id="checkout-sub">End of shift</div>
       </div>
       <div class="action-arrow">&#8250;</div>
     </button>
@@ -505,11 +505,16 @@ function renderMainScreen() {
     var endSub   = document.getElementById('breakend-sub');
     var remaining = 3 - breakStartsCount;
 
+    var checkoutSub = document.getElementById('checkout-sub');
     if (onBreak) {
       document.getElementById('btn-breakstart').classList.add('disabled');
+      // Пока идёт брейк, чекаут недоступен – сначала End break
+      document.getElementById('btn-checkout').classList.add('disabled');
+      checkoutSub.textContent = 'End your break first';
       startSub.textContent = 'You are on break now';
       endSub.textContent = 'Tap to end your current break';
     } else {
+      checkoutSub.textContent = 'End of shift';
       document.getElementById('btn-breakend').classList.add('disabled');
       if (breakStartsCount >= 3) {
         document.getElementById('btn-breakstart').classList.add('disabled');
@@ -553,7 +558,10 @@ function doCheckin() {
   );
 }
 
-function doCheckout(reason) { performAction('checkout', reason); }
+function doCheckout(reason) {
+  if (onBreak) { alert('You are on a break. Tap "End break" first, then check out at the end of your shift.'); return; }
+  performAction('checkout', reason);
+}
 function doBreakStart()     { performAction('breakstart'); }
 function doBreakEnd()       { performAction('breakend'); }
 
